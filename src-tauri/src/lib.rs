@@ -1,0 +1,64 @@
+use once_cell::sync::Lazy;
+use std::sync::atomic::{AtomicU32, Ordering};
+use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_single_instance;
+
+/* ---------- global counter ---------- */
+static ENTROPY_BITS: Lazy<AtomicU32> = Lazy::new(|| AtomicU32::new(0));
+const TARGET_BITS: u32 = 512;
+const ENTROPY_PER_BYTE_NUM: u32 = 1;
+const ENTROPY_PER_BYTE_DEN: u32 = 2;
+
+/* ---------- IPC: accept entropy ---------- */
+#[tauri::command]
+fn entropy_batch(app: AppHandle, bytes: Vec<u8>) -> u32 {
+    /* add 0.5 bit for each byte */
+    let added = (bytes.len() as u32 * ENTROPY_PER_BYTE_NUM) / ENTROPY_PER_BYTE_DEN;
+    let total = ENTROPY_BITS.fetch_add(added, Ordering::SeqCst) + added;
+
+    if total >= TARGET_BITS {
+        ENTROPY_BITS.store(0, Ordering::SeqCst);
+        app.emit("entropy_ready", ()).ok();
+    }
+    total.min(TARGET_BITS)
+}
+
+#[tauri::command]
+fn check_container_path(path: String) -> Result<(), String> {
+    use std::path::Path;
+    let p = Path::new(&path);
+    if p.exists() {
+        return Err("Файл уже существует".into());
+    }
+    if let Some(parent) = p.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/* ---------- run Tauri ---------- */
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            bring_to_front(app);
+        }))
+        .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![
+            entropy_batch,
+            check_container_path
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+
+/* ---------- bring already running window to the front ---------- */
+fn bring_to_front(app: &AppHandle) {
+    if let Some(win) = app.get_webview_window("main") {
+        // v2 API
+        let _ = win.unminimize();
+        let _ = win.set_focus();
+        let _ = win.show();
+    }
+}

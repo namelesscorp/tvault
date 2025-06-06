@@ -1,0 +1,6 @@
+dist
+node_modules
+package.json
+build
+manifest
+.gitlab-ci.yml
