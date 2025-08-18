@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { useSelector } from "react-redux";
-
 import { appInit } from "features/App/state/App.actions";
 import { selectAppInited } from "features/App/state/App.selectors";
 import { Router } from "features/Router";

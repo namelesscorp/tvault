@@ -1,0 +1,1 @@
+export { VaultShamirFileStep } from "./VaultShamirFileStep";

@@ -1,36 +1,44 @@
-import { BoxIcon, DashboardIcon, LockClosedIcon } from "@radix-ui/react-icons";
-import clsx from "clsx";
+import { useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-
 import { RouteTypes } from "interfaces";
+import { icons } from "~/assets/collections/icons";
+import { UIButton } from "~/features/UI";
+import { UIIconButton } from "~/features/UI/components/UIIconButton";
 
 const items = [
-	{ to: RouteTypes.Main, label: "Dashboard", icon: DashboardIcon },
-	{ to: RouteTypes.CreateVault, label: "Create Vault", icon: BoxIcon },
-	{ to: RouteTypes.OpenVault, label: "Open Vault", icon: LockClosedIcon },
+	{ to: RouteTypes.Dashboard, label: "Dashboard", icon: icons.grid },
+	{ to: RouteTypes.VaultCreateBasic, label: "Create", icon: icons.lock },
+	{ to: RouteTypes.VaultOpenContainer, label: "Open", icon: icons.unlock },
 ];
 
 const LayoutSidebar = () => {
 	const { pathname } = useLocation();
 
+	const navItems = useMemo(
+		() =>
+			items.map(({ to, label, icon }) => ({
+				to,
+				label,
+				icon,
+				isActive: pathname === to,
+			})),
+		[pathname],
+	);
+
 	return (
-		<aside className="w-44 shrink-0 border-r border-gray-6 bg-gray-1">
-			<nav className="flex flex-col mt-4">
-				{items.map(({ to, label, icon: Icon }) => (
-					<NavLink
-						key={to}
-						to={to}
-						className={clsx(
-							"flex items-center gap-2 px-4 py-2 text-sm rounded-r-full hover:bg-violet-3",
-							pathname === to
-								? "bg-violet-4 text-violet-11 font-medium"
-								: "text-gray-11",
-						)}>
-						<Icon className="w-4 h-4" />
-						{label}
+		<aside className="w-[200px] flex flex-col justify-between bg-black/10 border-r border-white/10 p-[10px]">
+			<nav className="flex flex-col gap-[10px]">
+				{navItems.map(({ to, label, icon, isActive }) => (
+					<NavLink key={to} to={to}>
+						<UIButton text={label} icon={icon} active={isActive} />
 					</NavLink>
 				))}
 			</nav>
+			<div className="flex items-center gap-[10px]">
+				<UIIconButton icon={icons.settings} />
+				<UIIconButton icon={icons.help_circle} />
+				<UIIconButton icon={icons.globe} />
+			</div>
 		</aside>
 	);
 };

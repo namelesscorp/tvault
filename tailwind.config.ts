@@ -1,12 +1,6 @@
-import { indigo, gray } from '@radix-ui/colors';
-
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
-    colors: {
-      ...indigo,
-      ...gray,
-    },
     extend: {
       colors: {
         accent: {

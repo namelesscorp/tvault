@@ -1,5 +1,4 @@
 import { configureStore } from "@reduxjs/toolkit";
-
 import { StoreReducer } from "./Store.reducer";
 
 const isProduction = MODE === "production";

@@ -1,6 +1,7 @@
 import { Action } from "redux";
 
 export interface AppAction extends Action {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	payload: any;
 }
 

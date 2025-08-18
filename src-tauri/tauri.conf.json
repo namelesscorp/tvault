@@ -13,8 +13,11 @@
 		"windows": [
 			{
 				"title": "tvault-client",
-				"width": 800,
-				"height": 600
+				"width": 1200,
+				"height": 800,
+				"resizable": false,
+				"decorations": false,
+				"transparent": false
 			}
 		],
 		"security": {
@@ -30,6 +33,7 @@
 			"icons/128x128@2x.png",
 			"icons/icon.icns",
 			"icons/icon.ico"
-		]
+		],
+		"externalBin": ["./binaries/tvault-core"]
 	}
 }

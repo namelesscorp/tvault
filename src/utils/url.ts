@@ -1,5 +1,4 @@
 import { matchPath } from "react-router-dom";
-
 import { RouteTypes } from "interfaces";
 
 export const extractRouteByLocation = (location: string) => {

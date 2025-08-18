@@ -24,8 +24,8 @@
 		"paths": {
 			"~/*": ["./src/*"],
 			"features/*": ["./src/features/*"],
-			"assets": ["./src/assets"],
-			"helpers": ["./src/helpers"],
+			"assets/*": ["./src/assets/*"],
+			"helpers/*": ["./src/helpers/*"],
 			"utils": ["./src/utils"],
 			"interfaces": ["./src/interfaces"]
 		}

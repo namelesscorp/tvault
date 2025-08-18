@@ -1,5 +1,4 @@
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
-
 import { ROUTER_BASE_PATH, routes } from "../../Router.model";
 
 const Router: React.FC = () => {

@@ -2,6 +2,11 @@ use once_cell::sync::Lazy;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_single_instance;
+use tauri_plugin_fs;
+use tauri_plugin_store;
+mod cli_runner;
+
+use cli_runner::{run_encrypt, run_decrypt, run_container_info, run_reseal, container_info_once}; 
 
 /* ---------- global counter ---------- */
 static ENTROPY_BITS: Lazy<AtomicU32> = Lazy::new(|| AtomicU32::new(0));
@@ -36,18 +41,46 @@ fn check_container_path(path: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn remove_dir(path: String, recursive: bool) -> Result<(), String> {
+    use std::fs;
+    use std::path::Path;
+    
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Ok(());
+    }
+    
+    if recursive {
+        fs::remove_dir_all(p).map_err(|e| e.to_string())?;
+    } else {
+        fs::remove_dir(p).map_err(|e| e.to_string())?;
+    }
+    
+    Ok(())
+}
+
+
 /* ---------- run Tauri ---------- */
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             bring_to_front(app);
         }))
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             entropy_batch,
-            check_container_path
+            check_container_path,
+            remove_dir,
+            run_encrypt,
+            run_decrypt,
+            run_container_info,
+            container_info_once,
+            run_reseal
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

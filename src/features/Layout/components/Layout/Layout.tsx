@@ -1,18 +1,22 @@
 import { Outlet } from "react-router-dom";
-
+import { useVaultStateReset } from "~/features/Vault";
 import { LayoutHeader } from "../LayoutHeader";
 import { LayoutSidebar } from "../LayoutSidebar";
 
-const Layout = () => (
-	<div className="h-screen flex flex-col">
-		<LayoutHeader />
-		<div className="flex flex-1 overflow-hidden">
-			<LayoutSidebar />
-			<main className="flex-1 overflow-y-auto bg-gray-2 p-4">
-				<Outlet />
-			</main>
+const Layout = () => {
+	useVaultStateReset();
+
+	return (
+		<div className="h-screen flex flex-col bg-[#101318]">
+			<LayoutHeader />
+			<div className="flex flex-1 overflow-hidden">
+				<LayoutSidebar />
+				<main className="w-full p-[20px]">
+					<Outlet />
+				</main>
+			</div>
 		</div>
-	</div>
-);
+	);
+};
 
 export { Layout };

@@ -1,92 +1,140 @@
-/* Radix Themes */
-import { Box, Button, Callout, Flex, Text, TextField } from "@radix-ui/themes";
 import { invoke } from "@tauri-apps/api/core";
 import { join } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { z } from "zod";
+import { RouteTypes } from "interfaces";
+import { useAppDispatch } from "features/Store";
+import { UIButton, UIInput, UISectionHeading } from "features/UI";
+import { icons } from "~/assets/collections/icons";
+import { vaultSetWizardState } from "../../state/Vault.actions";
+import { selectVaultWizardState } from "../../state/Vault.selectors";
 
 const schema = z.object({
-	name: z.string().min(1, "Введите имя"),
-	path: z.string().min(1, "Выберите путь"),
+	name: z.string().min(1, "Enter name"),
+	outputPath: z.string().min(1, "Choose path to save"),
+	inputPath: z.string().min(1, "Choose path to encrypt"),
 });
 
-const VaultBasicStep = ({
-	onNext,
-}: {
-	onNext: (data: { name: string; path: string }) => void;
-}) => {
-	const [name, setName] = useState("");
-	const [path, setPath] = useState("");
-	const [error, setError] = useState<string | null>(null);
+const VaultBasicStep = () => {
+	const wizard = useSelector(selectVaultWizardState);
+	const dispatch = useAppDispatch();
+	const navigate = useNavigate();
+
+	const [name, setName] = useState(wizard.name);
+	const [outputPath, setOutputPath] = useState(wizard.outputPath);
+	const [inputPath, setInputPath] = useState(wizard.inputPath);
 	const [busy, setBusy] = useState(false);
 
-	/* выбор директории */
-	const pickDir = async () => {
+	const pickSaveDir = useCallback(async () => {
 		const dir = await open({ directory: true, multiple: false });
 		if (typeof dir !== "string") return;
 		const safe = (name || "vault").replace(/[^a-z0-9_-]/gi, "_");
-		setPath(await join(dir, `${safe}.tvlt`));
-	};
+		setOutputPath(await join(dir, `${safe}.tvlt`));
+	}, [name]);
 
-	const next = async () => {
-		const parsed = schema.safeParse({ name, path });
-		if (!parsed.success) return setError(parsed.error.issues[0].message);
+	const pickSourceDir = useCallback(async () => {
+		const dir = await open({ directory: true, multiple: false });
+		if (typeof dir !== "string") return;
+		setInputPath(dir);
+	}, []);
+
+	const next = useCallback(async () => {
+		const parsed = schema.safeParse({ name, outputPath, inputPath });
+		if (!parsed.success) {
+			toast.error(parsed.error.issues[0].message);
+			return;
+		}
 		setBusy(true);
 		try {
-			await invoke("check_container_path", { path });
-			onNext({ name, path });
-		} catch (e: any) {
-			setError(String(e));
+			await invoke("check_container_path", { path: outputPath });
+			dispatch(
+				vaultSetWizardState({ ...wizard, name, outputPath, inputPath }),
+			);
+			navigate(RouteTypes.VaultCreateComment);
+		} catch (e: unknown) {
+			toast.error(String(e));
 		} finally {
 			setBusy(false);
 		}
-	};
+	}, [name, outputPath, inputPath, dispatch, wizard, navigate]);
 
 	return (
-		<Box width="360px">
-			<Text as="label" size="2" weight="medium">
-				Имя контейнера
-			</Text>
-			<TextField.Root
-				value={name}
-				onChange={e => setName(e.target.value)}
-				mt="1"
-				mb="3"
-				placeholder="Project Docs"
-			/>
-
-			<Text as="label" size="2" weight="medium">
-				Папка для контейнера
-			</Text>
-			<Flex gap="2" mt="1" mb="4">
-				<TextField.Root
-					readOnly
-					value={path}
-					placeholder="Не выбрана"
-					style={{ flex: 1 }}
+		<div>
+			<UISectionHeading icon={icons.lock} text={"Create"} />
+			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
+				Step 1 / 6 — Name and Paths
+			</p>
+			<div className="flex flex-col gap-[20px] p-[20px] bg-white/5 rounded-[10px] mt-[20px]">
+				<div className="flex flex-col gap-[10px]">
+					<p className="text-[20px] text-white text-medium">
+						Container name:
+					</p>
+					<UIInput
+						value={name}
+						onChange={e => setName(e.target.value)}
+						placeholder="Enter name"
+						style={{ maxWidth: "50%" }}
+					/>
+				</div>
+				<div className="flex flex-col gap-[10px]">
+					<p className="text-[20px] text-white text-medium">
+						Path to folder for encrypt:
+					</p>
+					<div className="flex items-center gap-[10px]">
+						<UIInput
+							value={inputPath}
+							placeholder="Choose"
+							style={{ maxWidth: "50%" }}
+							readOnly
+						/>
+						<UIButton
+							icon={icons.folder}
+							text="Browse"
+							onClick={pickSourceDir}
+							style={{ width: "fit-content" }}
+						/>
+					</div>
+				</div>
+				<div className="flex flex-col gap-[10px]">
+					<p className="text-[20px] text-white text-medium">
+						Path to save container:
+					</p>
+					<div className="flex items-center gap-[10px]">
+						<UIInput
+							value={outputPath}
+							placeholder="Choose"
+							style={{ maxWidth: "50%" }}
+							onChange={e => setOutputPath(e.target.value)}
+						/>
+						<UIButton
+							icon={icons.folder}
+							text="Browse"
+							onClick={pickSaveDir}
+							style={{ width: "fit-content" }}
+						/>
+					</div>
+				</div>
+			</div>
+			<div className="flex items-center gap-[10px] mt-[20px]">
+				<UIButton
+					icon={icons.back}
+					text="Back"
+					onClick={() => navigate(-1)}
+					style={{ width: "fit-content" }}
 				/>
-				<Button size="2" onClick={pickDir}>
-					Обзор…
-				</Button>
-			</Flex>
-
-			{error && (
-				<Callout.Root color="red" mb="3">
-					<Callout.Text>{error}</Callout.Text>
-				</Callout.Root>
-			)}
-
-			<Flex justify="end">
-				<Button
+				<UIButton
+					icon={icons.arrow_right}
+					text="Next"
 					onClick={next}
 					disabled={busy}
-					variant="solid"
-					color="indigo">
-					Далее →
-				</Button>
-			</Flex>
-		</Box>
+					style={{ width: "fit-content" }}
+				/>
+			</div>
+		</div>
 	);
 };
 

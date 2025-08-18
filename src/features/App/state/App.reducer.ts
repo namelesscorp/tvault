@@ -1,5 +1,4 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
-
 import { APP_STORE_KEY, AppSlice } from "./App.slice";
 
 const initialState: AppSlice = {
