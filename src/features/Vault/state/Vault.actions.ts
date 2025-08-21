@@ -15,4 +15,7 @@ export const {
 	vaultSetOpenWizardState,
 	vaultResetOpenWizardState,
 	vaultUpdateRecentMountPath,
+	vaultAddResealData,
+	vaultRemoveResealData,
+	vaultClearResealData,
 } = vaultSlice.actions;

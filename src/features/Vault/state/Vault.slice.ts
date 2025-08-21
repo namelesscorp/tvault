@@ -1,5 +1,9 @@
 import type { ContainerInfoData } from "interfaces";
-import { VaultOpenWizardState, VaultWizardState } from "../Vault.model";
+import {
+	ResealData,
+	VaultOpenWizardState,
+	VaultWizardState,
+} from "../Vault.model";
 
 export const VAULT_STORE_KEY = "vault";
 
@@ -9,4 +13,5 @@ export interface VaultSlice {
 	containers: Record<string, string>;
 	recent: { path: string; lastOpenedAt: number; lastMountPath?: string }[];
 	containerInfo: Record<string, ContainerInfoData>;
+	resealData: ResealData[];
 }

@@ -41,6 +41,17 @@ const VaultDecryptSummaryStep = () => {
 		return showIntegrityPassword ? password : "•".repeat(20);
 	};
 
+	const getAuthMethodDisplay = () => {
+		if (wizard.tokenType === "master") {
+			return "Master token only";
+		} else if (wizard.tokenType === "none") {
+			return "Password only";
+		} else if (wizard.tokenType === "share") {
+			return "Shamir shares";
+		}
+		return "—";
+	};
+
 	return (
 		<div>
 			<UISectionHeading icon={icons.unlock} text={"Open"} />
@@ -52,6 +63,8 @@ const VaultDecryptSummaryStep = () => {
 				<p>{containerInfo?.version || "—"}</p>
 				<p className="opacity-50">Token:</p>
 				<p>{wizard.tokenType || "—"}</p>
+				<p className="opacity-50">Auth method:</p>
+				<p>{getAuthMethodDisplay()}</p>
 				<p className="opacity-50">Integrity:</p>
 				<p>{humanIntegrity[wizard.integrityProvider] || "—"}</p>
 				<p className="opacity-50">Container path:</p>

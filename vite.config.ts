@@ -1,24 +1,24 @@
-import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path from "path"
+import path from "path";
+import { defineConfig } from "vite";
 import { ViteImageOptimizer } from "vite-plugin-image-optimizer";
-import tailwindcss from '@tailwindcss/vite'
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
-export default defineConfig(async ({mode}) => {
-  const isProd = mode === 'production';
+export default defineConfig(async ({ mode }) => {
+	const isProd = mode === "production";
 
-  return {
-    build: {
+	return {
+		build: {
 			minify: isProd,
 			sourcemap: !isProd,
 			outDir: "build",
 			emptyOutDir: true,
 			rollupOptions: {
 				output: {
-					assetFileNames: (assetInfo) => {
+					assetFileNames: assetInfo => {
 						const ext = assetInfo.name?.split(".").pop();
 						let prefix = "";
 						if (ext?.match(/eot|ttf|otf|woff|woff2/)) {
@@ -39,9 +39,9 @@ export default defineConfig(async ({mode}) => {
 				},
 			},
 		},
-    plugins: [
+		plugins: [
 			react(),
-      tailwindcss(),
+			tailwindcss(),
 			ViteImageOptimizer({
 				png: {
 					quality: 100,
@@ -73,7 +73,7 @@ export default defineConfig(async ({mode}) => {
 				},
 			}),
 		],
-    resolve: {
+		resolve: {
 			alias: {
 				"~": path.resolve(__dirname, "./src"),
 				features: path.resolve(__dirname, "./src/features"),
@@ -88,26 +88,26 @@ export default defineConfig(async ({mode}) => {
 			MODE: JSON.stringify(mode),
 			BUILD_DATE: JSON.stringify(new Date().toLocaleString("ru-RU")),
 		},
-    // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
-    //
-    // 1. prevent vite from obscuring rust errors
-    clearScreen: false,
-    // 2. tauri expects a fixed port, fail if that port is not available
-    server: {
-      port: 1420,
-      strictPort: true,
-      host: host || false,
-      hmr: host
-        ? {
-            protocol: "ws",
-            host,
-            port: 1421,
-          }
-        : undefined,
-      watch: {
-        // 3. tell vite to ignore watching `src-tauri`
-        ignored: ["**/src-tauri/**"],
-      },
-    },
-  }
+		// Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
+		//
+		// 1. prevent vite from obscuring rust errors
+		clearScreen: false,
+		// 2. tauri expects a fixed port, fail if that port is not available
+		server: {
+			port: 1420,
+			strictPort: true,
+			host: host || false,
+			hmr: host
+				? {
+						protocol: "ws",
+						host,
+						port: 1421,
+					}
+				: undefined,
+			watch: {
+				// 3. tell vite to ignore watching `src-tauri`
+				ignored: ["**/src-tauri/**"],
+			},
+		},
+	};
 });

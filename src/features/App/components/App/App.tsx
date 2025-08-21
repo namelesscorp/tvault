@@ -4,6 +4,7 @@ import { appInit } from "features/App/state/App.actions";
 import { selectAppInited } from "features/App/state/App.selectors";
 import { Router } from "features/Router";
 import { useAppDispatch } from "features/Store";
+import { store } from "features/Store";
 
 const App = () => {
 	const dispatch = useAppDispatch();
@@ -11,7 +12,7 @@ const App = () => {
 
 	useEffect(() => {
 		(async () => {
-			await dispatch(appInit());
+			await appInit(dispatch, () => store.getState());
 		})();
 	}, [dispatch]);
 

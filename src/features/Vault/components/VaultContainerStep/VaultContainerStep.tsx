@@ -5,7 +5,12 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { RouteTypes } from "interfaces";
-import { getMountPathWithFallback } from "utils";
+import {
+	createAsyncOnceGuard,
+	devError,
+	getMountPathWithFallback,
+	useRequestGuard,
+} from "utils";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UICheckbox, UIInput, UISectionHeading } from "features/UI";
 import { icons } from "~/assets/collections/icons";
@@ -18,6 +23,37 @@ import {
 	selectVaultOpenWizardState,
 	selectVaultRecent,
 } from "../../state/Vault.selectors";
+
+const saveRecentData = createAsyncOnceGuard(
+	async (path: string, dispatch: any) => {
+		try {
+			const store = await Store.load("recent-containers.json");
+			const KEY = "recent";
+			const recentData =
+				(await store.get<
+					{
+						path: string;
+						lastOpenedAt: number;
+						lastMountPath?: string;
+					}[]
+				>(KEY)) ?? [];
+			const filtered = recentData.filter(
+				(r: { path: string }) => r.path !== path,
+			);
+			filtered.unshift({
+				path,
+				lastOpenedAt: Date.now(),
+			});
+			const capped = filtered.slice(0, 100);
+			await store.set(KEY, capped);
+			await store.save();
+
+			dispatch(vaultAddRecentWithMountPath({ path }));
+		} catch (e) {
+			devError("Failed to save recent container", e);
+		}
+	},
+);
 
 const VaultContainerStep = () => {
 	const wizard = useSelector(selectVaultOpenWizardState);
@@ -34,6 +70,9 @@ const VaultContainerStep = () => {
 	const [busy, setBusy] = useState(false);
 	const [containerInfo, setContainerInfo] = useState<any>(null);
 
+	const { fn: guardedRunContainerInfo, reset: resetContainerInfo } =
+		useRequestGuard(runContainerInfo);
+
 	useEffect(() => {
 		if (path) {
 			const recentItem = recent.find(r => r.path === path);
@@ -46,24 +85,26 @@ const VaultContainerStep = () => {
 				autoMountDir: wizard.autoMountDir,
 			});
 
-			if (wizard.customMountDir) {
-				setCustomMountDir(wizard.customMountDir);
-				setAutoMountDir(false);
-			} else if (savedMountPath) {
-				setCustomMountDir(savedMountPath);
-				setAutoMountDir(false);
-			} else {
-				setAutoMountDir(true);
-				setCustomMountDir("");
+			if (!autoMountDir && !customMountDir) {
+				if (wizard.customMountDir) {
+					setCustomMountDir(wizard.customMountDir);
+					setAutoMountDir(false);
+				} else if (savedMountPath) {
+					setCustomMountDir(savedMountPath);
+					setAutoMountDir(false);
+				} else {
+					setAutoMountDir(true);
+					setCustomMountDir("");
+				}
 			}
 		}
-	}, [path, recent, wizard.customMountDir]);
+	}, [path, recent, wizard.customMountDir, autoMountDir, customMountDir]);
 
 	useEffect(() => {
 		if (path && !containerInfo) {
-			runContainerInfo(path).catch(() => {});
+			guardedRunContainerInfo(path).catch(() => {});
 		}
-	}, [path, containerInfo, runContainerInfo]);
+	}, [path, containerInfo, guardedRunContainerInfo]);
 
 	useEffect(() => {
 		if (done && result && !error) {
@@ -93,7 +134,8 @@ const VaultContainerStep = () => {
 
 		setPath(file);
 		setContainerInfo(null);
-	}, []);
+		resetContainerInfo();
+	}, [resetContainerInfo]);
 
 	const pickMountDir = useCallback(async () => {
 		const dir = await open({ directory: true, multiple: false });
@@ -151,28 +193,7 @@ const VaultContainerStep = () => {
 			);
 
 			try {
-				const store = await Store.load("recent-containers.json");
-				const KEY = "recent";
-				const recentData =
-					(await store.get<
-						{
-							path: string;
-							lastOpenedAt: number;
-							lastMountPath?: string;
-						}[]
-					>(KEY)) ?? [];
-				const filtered = recentData.filter(
-					(r: { path: string }) => r.path !== path,
-				);
-				filtered.unshift({
-					path,
-					lastOpenedAt: Date.now(),
-				});
-				const capped = filtered.slice(0, 100);
-				await store.set(KEY, capped);
-				await store.save();
-
-				dispatch(vaultAddRecentWithMountPath({ path }));
+				await saveRecentData(path, dispatch);
 			} catch {}
 
 			if (tokenType === "none") {

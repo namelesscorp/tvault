@@ -28,3 +28,14 @@ export const selectVaultContainerInfo = createSelector(
 	selectVaultSlice,
 	slice => slice.containerInfo,
 );
+
+export const selectVaultResealData = createSelector(
+	selectVaultSlice,
+	slice => slice.resealData,
+);
+
+export const selectVaultResealDataByPath = createSelector(
+	[selectVaultSlice, (_: AppState, containerPath: string) => containerPath],
+	(slice, containerPath) =>
+		slice.resealData.find(data => data.containerPath === containerPath),
+);

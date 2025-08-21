@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { devError, devLog } from "utils";
 import type { VaultWizardState } from "../Vault.model";
 
@@ -9,6 +9,7 @@ const useEncrypt = (wizardState: VaultWizardState) => {
 	const [done, setDone] = useState(false);
 	const [result, setResult] = useState<Record<string, unknown> | null>(null);
 	const [error, setError] = useState<unknown | null>(null);
+	const runningRef = useRef(false);
 
 	useEffect(() => {
 		const un1 = listen<number>("encrypt-progress", e => {
@@ -18,6 +19,9 @@ const useEncrypt = (wizardState: VaultWizardState) => {
 		const un2 = listen<boolean>("encrypt-done", e => {
 			devLog("[tvault] done", e.payload);
 			setDone(e.payload);
+			if (e.payload) {
+				runningRef.current = false;
+			}
 		});
 		const un3 = listen<Record<string, unknown>>("encrypt-result", e => {
 			console.log("[tvault] encrypt-result:", e.payload);
@@ -40,11 +44,18 @@ const useEncrypt = (wizardState: VaultWizardState) => {
 		};
 	}, []);
 
-	let running = false;
-
 	const run = async () => {
-		if (running) return;
-		running = true;
+		if (runningRef.current) {
+			devLog("[tvault] encrypt already running, skipping");
+			return;
+		}
+
+		runningRef.current = true;
+		setProgress(0);
+		setDone(false);
+		setError(null);
+		setResult(null);
+
 		const args = {
 			name: wizardState.name || undefined,
 			container_path: wizardState.outputPath,
@@ -75,9 +86,8 @@ const useEncrypt = (wizardState: VaultWizardState) => {
 		} catch (err) {
 			devError("[tvault] invoke failed", err);
 			setError(err);
+			runningRef.current = false;
 			throw err;
-		} finally {
-			running = false;
 		}
 	};
 

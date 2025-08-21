@@ -18,19 +18,26 @@ const VaultPasswordStep = () => {
 	const [masterToken, setMasterToken] = useState(wizard.masterToken || "");
 
 	const next = useCallback(() => {
-		if (!pwd.length) {
-			toast.error("Enter password");
-			return;
+		if (wizard.tokenType === "master") {
+			if (!masterToken.trim()) {
+				toast.error("Enter master token");
+				return;
+			}
+		} else {
+			if (!pwd.length) {
+				toast.error("Enter password");
+				return;
+			}
 		}
-		if (wizard.tokenType === "master" && !masterToken.trim()) {
-			toast.error("Enter master token");
-			return;
-		}
+
 		dispatch(
 			vaultSetOpenWizardState({
 				...wizard,
-				password: pwd,
-				masterToken: masterToken.trim() || undefined,
+				password: wizard.tokenType === "master" ? undefined : pwd,
+				masterToken:
+					wizard.tokenType === "master"
+						? masterToken.trim()
+						: undefined,
 			}),
 		);
 		if (wizard.integrityProvider === "none") {
@@ -44,21 +51,13 @@ const VaultPasswordStep = () => {
 		<div>
 			<UISectionHeading icon={icons.lock} text="Open" />
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 2 / 4 — Container Password
+				Step 2 / 4 —{" "}
+				{wizard.tokenType === "master"
+					? "Master Token"
+					: "Container Password"}
 			</p>
 			<div className="flex flex-col gap-[20px] p-[20px] bg-white/5 rounded-[10px] mt-[20px]">
-				<div className="flex flex-col gap-[10px]">
-					<p className="text-[20px] text-white text-medium">
-						Container password for decrypt::
-					</p>
-					<UIPasswordField
-						value={pwd}
-						onChange={e => setPwd(e.target.value)}
-						placeholder="Enter"
-						style={{ maxWidth: "50%" }}
-					/>
-				</div>
-				{wizard.tokenType === "master" && (
+				{wizard.tokenType === "master" ? (
 					<div className="flex flex-col gap-[10px]">
 						<p className="text-[20px] text-white text-medium">
 							Master token:
@@ -67,6 +66,18 @@ const VaultPasswordStep = () => {
 							value={masterToken}
 							onChange={e => setMasterToken(e.target.value)}
 							placeholder="Master token"
+							style={{ maxWidth: "50%" }}
+						/>
+					</div>
+				) : (
+					<div className="flex flex-col gap-[10px]">
+						<p className="text-[20px] text-white text-medium">
+							Container password for decrypt:
+						</p>
+						<UIPasswordField
+							value={pwd}
+							onChange={e => setPwd(e.target.value)}
+							placeholder="Enter"
 							style={{ maxWidth: "50%" }}
 						/>
 					</div>
@@ -84,9 +95,9 @@ const VaultPasswordStep = () => {
 					text="Next"
 					onClick={next}
 					disabled={
-						pwd.length === 0 ||
-						(wizard.tokenType === "master" &&
-							masterToken.trim().length === 0)
+						wizard.tokenType === "master"
+							? masterToken.trim().length === 0
+							: pwd.length === 0
 					}
 					style={{ width: "fit-content" }}
 				/>

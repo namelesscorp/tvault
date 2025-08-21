@@ -20,7 +20,8 @@ html,
 body {
 	width: 100%;
 	height: 100%;
-	background-color: #ffffff;
+	background-color: #101318;
+	overflow: hidden;
 }
 
 #root {

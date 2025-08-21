@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import { useLocation } from "react-router-dom";
 import { RouteTypes } from "interfaces";
 import {
+	vaultClearResealData,
 	vaultResetOpenWizardState,
 	vaultResetWizardState,
 } from "../state/Vault.actions";
@@ -36,4 +37,15 @@ export const useVaultStateReset = () => {
 			return;
 		}
 	}, [location.pathname, dispatch]);
+
+	useEffect(() => {
+		const handleBeforeUnload = () => {
+			dispatch(vaultClearResealData());
+		};
+
+		window.addEventListener("beforeunload", handleBeforeUnload);
+		return () => {
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+		};
+	}, [dispatch]);
 };

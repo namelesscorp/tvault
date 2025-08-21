@@ -50,16 +50,22 @@ pub struct ContainerInfoArgs {
 }
 
 #[derive(Deserialize)]
+#[derive(Debug)]
 pub struct ResealArgs {
   current_path:        String,
   new_path:            Option<String>,
   folder_path:         String,
+  name:                Option<String>,
   passphrase:          Option<String>,
   comment:             Option<String>,
   tags:                Option<String>,
   integrity_provider:  Option<String>,   // none | hmac | ed25519
   current_integrity_password: Option<String>,
   new_integrity_password: Option<String>,
+  master_token:        Option<String>,
+  shares:              Option<Vec<String>>,
+  token_type:          Option<String>,
+  token_json_path:     Option<String>,
 }
 
 /* ─────────── Public Commands ─────────── */
@@ -185,7 +191,7 @@ fn build_unseal_cmd(a: DecryptArgs) -> Result<Command, String> {
       c.args(["token-reader", "-type=flag", "-format=plaintext", &format!("-flag={}", master)]);
     }
   } else if let Some(reader_type) = a.token_reader_type.as_deref() {
-    // Use token-reader for shares
+    // Use token-reader for shares or master token only
     match (reader_type, a.token_format.as_deref()) {
       ("flag", Some(fmt)) => {
         let flag = a.token_flag.unwrap_or_default();
@@ -243,16 +249,98 @@ fn build_reseal_cmd(a: ResealArgs) -> Result<Command, String> {
     &format!("-current-path={}", a.current_path),
     &format!("-folder-path={}", a.folder_path),
   ]);
-  if let Some(newp) = a.new_path { c.arg(format!("-new-path={newp}")); }
-  if let Some(pf) = a.passphrase { c.arg(format!("-passphrase={pf}")); }
-  if let Some(cmt) = a.comment { c.arg(format!("-comment={cmt}")); }
-  if let Some(tags) = a.tags { c.arg(format!("-tags={tags}")); }
-  if let Some(ip) = a.integrity_provider {
-    c.args(["integrity-provider", &format!("-type={}", ip)]);
+  
+  let mut cmd_args = vec![
+    "reseal".to_string(),
+    "container".to_string(),
+    format!("-current-path={}", a.current_path),
+    format!("-folder-path={}", a.folder_path),
+  ];
+  
+  if let Some(ref newp) = a.new_path { 
+    c.arg(format!("-new-path={newp}")); 
+    cmd_args.push(format!("-new-path={newp}"));
   }
-  if let Some(cur) = a.current_integrity_password { c.arg(format!("-current-passphrase={cur}")); }
-  if let Some(new) = a.new_integrity_password { c.arg(format!("-new-passphrase={new}")); }
+  if let Some(ref name) = a.name { 
+    c.arg(format!("-name={name}")); 
+    cmd_args.push(format!("-name={name}"));
+  }
+  if let Some(ref pf) = a.passphrase { 
+    c.arg(format!("-passphrase={pf}")); 
+    cmd_args.push(format!("-passphrase={pf}"));
+  }
+  if let Some(ref cmt) = a.comment { 
+    c.arg(format!("-comment={cmt}")); 
+    cmd_args.push(format!("-comment={cmt}"));
+  }
+  if let Some(ref tags) = a.tags { 
+    c.arg(format!("-tags={tags}")); 
+    cmd_args.push(format!("-tags={tags}"));
+  }
+
+  if let Some(ref token_type) = a.token_type {
+    match token_type.as_str() {
+      "master" => {
+        if let Some(ref master_token) = a.master_token {
+          c.args(["token-reader", "-type=flag", "-format=plaintext", &format!("-flag={}", master_token)]);
+          cmd_args.push("token-reader".to_string());
+          cmd_args.push("-type=flag".to_string());
+          cmd_args.push("-format=plaintext".to_string());
+          cmd_args.push(format!("-flag={}", master_token));
+        }
+      },
+      "share" => {
+        if let Some(ref token_json_path) = a.token_json_path {
+          c.args(["token-reader", "-type=file", "-format=json", &format!("-path={}", token_json_path)]);
+          cmd_args.push("token-reader".to_string());
+          cmd_args.push("-type=file".to_string());
+          cmd_args.push("-format=json".to_string());
+          cmd_args.push(format!("-path={}", token_json_path));
+        } else if let Some(ref shares) = a.shares {
+          let shares_str = shares.join("|");
+          c.args(["token-reader", "-type=flag", "-format=plaintext", &format!("-flag={}", shares_str)]);
+          cmd_args.push("token-reader".to_string());
+          cmd_args.push("-type=flag".to_string());
+          cmd_args.push("-format=plaintext".to_string());
+          cmd_args.push(format!("-flag={}", shares_str));
+        }
+      },
+      "none" => {
+        if let Some(ref pf) = a.passphrase {
+          c.args(["token-reader", "-type=flag", "-format=plaintext", &format!("-flag={}", pf)]);
+          cmd_args.push("token-reader".to_string());
+          cmd_args.push("-type=flag".to_string());
+          cmd_args.push("-format=plaintext".to_string());
+          cmd_args.push(format!("-flag={}", pf));
+        }
+        println!("[tvault] Using passphrase-only mode (type=none)");
+      },
+      _ => {}
+    }
+  }
+
+  if let Some(ref ip) = a.integrity_provider {
+    if ip != "none" {
+      c.args(["integrity-provider"]);
+      cmd_args.push("integrity-provider".to_string());
+    }
+  }
+  if let Some(ref cur) = a.current_integrity_password { 
+    c.arg(format!("-current-passphrase={cur}")); 
+    cmd_args.push(format!("-current-passphrase={cur}"));
+  }
+  if let Some(ref new) = a.new_integrity_password { 
+    c.arg(format!("-new-passphrase={new}")); 
+    cmd_args.push(format!("-new-passphrase={new}"));
+  } else if let Some(ref cur) = a.current_integrity_password {
+    c.arg(format!("-new-passphrase={cur}")); 
+    cmd_args.push(format!("-new-passphrase={cur}"));
+  }
   c.args(["log-writer", "-type=stdout", "-format=json"]);
+  cmd_args.push("log-writer".to_string());
+  cmd_args.push("-type=stdout".to_string());
+  cmd_args.push("-format=json".to_string());
+  
   Ok(c)
 }
 

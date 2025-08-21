@@ -30,6 +30,8 @@ const VaultEncryptRunStep = () => {
 	const [savedPassword, setSavedPassword] = useState<string>("");
 	const [savedGeneratedKey, setSavedGeneratedKey] = useState<string>("");
 	const [savedTokenType, setSavedTokenType] = useState<string>("");
+	const [savedAdditionalPassword, setSavedAdditionalPassword] =
+		useState<string>("");
 
 	const { progress, done, result, error, run } = useEncrypt(wizard);
 
@@ -47,6 +49,7 @@ const VaultEncryptRunStep = () => {
 		setSavedPassword(wizard.passphrase || "");
 		setSavedGeneratedKey(wizard.generatedKey || "");
 		setSavedTokenType(wizard.tokenType || "");
+		setSavedAdditionalPassword(wizard.additionalPassword || "");
 
 		run();
 		return () => {
@@ -227,20 +230,16 @@ const VaultEncryptRunStep = () => {
 								onClick={openFileFolder}
 								style={{ width: "fit-content" }}
 							/>
-							{savedTokenType === "master" &&
-								(savedPassword || savedGeneratedKey) && (
-									<UIButton
-										icon={icons.copy}
-										text="Copy password"
-										onClick={() =>
-											copy(
-												savedPassword ||
-													savedGeneratedKey!,
-											)
-										}
-										style={{ width: "fit-content" }}
-									/>
-								)}
+							{savedAdditionalPassword && (
+								<UIButton
+									icon={icons.copy}
+									text="Copy integrity password"
+									onClick={() =>
+										copy(savedAdditionalPassword)
+									}
+									style={{ width: "fit-content" }}
+								/>
+							)}
 							<UIButton
 								icon={icons.check}
 								text="Done"
@@ -252,28 +251,22 @@ const VaultEncryptRunStep = () => {
 							/>
 						</div>
 					</div>
-					{savedTokenType === "master" &&
-						(savedPassword || savedGeneratedKey) && (
-							<div className="grid grid-cols-[1fr_auto] items-center gap-[10px] h-[50px] px-[15px] bg-[#3361D8]/10 border-[#2E68C4]/50 rounded-[10px] max-w-full">
-								<p className="text-[16px] text-medium overflow-hidden text-ellipsis whitespace-nowrap text-white">
-									Password:{" "}
-									{savedPassword || savedGeneratedKey}
-								</p>
-								<button
-									type="button"
-									onClick={() =>
-										copy(
-											savedPassword || savedGeneratedKey!,
-										)
-									}
-									className="w-[20px] h-[20px] flex items-center justify-center cursor-pointer mask-size-[16px] bg-white/50 hover:bg-white/70 transition-all duration-300"
-									style={{
-										WebkitMask: `url("${icons.copy}") no-repeat center`,
-										mask: `url("${icons.copy}") no-repeat center`,
-									}}
-								/>
-							</div>
-						)}
+					{savedAdditionalPassword && (
+						<div className="grid grid-cols-[1fr_auto] items-center gap-[10px] h-[50px] px-[15px] bg-[#3361D8]/10 border-[#2E68C4]/50 rounded-[10px] max-w-full">
+							<p className="text-[16px] text-medium overflow-hidden text-ellipsis whitespace-nowrap text-white">
+								Integrity Password: {savedAdditionalPassword}
+							</p>
+							<button
+								type="button"
+								onClick={() => copy(savedAdditionalPassword)}
+								className="w-[20px] h-[20px] flex items-center justify-center cursor-pointer mask-size-[16px] bg-white/50 hover:bg-white/70 transition-all duration-300"
+								style={{
+									WebkitMask: `url("${icons.copy}") no-repeat center`,
+									mask: `url("${icons.copy}") no-repeat center`,
+								}}
+							/>
+						</div>
+					)}
 				</div>
 			)}
 			{savedShareDest === "stdout" && (
@@ -344,30 +337,25 @@ const VaultEncryptRunStep = () => {
 										/>
 									</div>
 								))}
-								{savedTokenType === "master" &&
-									(savedPassword || savedGeneratedKey) && (
-										<div className="grid grid-cols-[1fr_auto] items-center gap-[10px] h-[50px] px-[15px] bg-[#3361D8]/10 border-[#2E68C4]/50 rounded-[10px] max-w-full">
-											<p className="text-[16px] text-medium overflow-hidden text-ellipsis whitespace-nowrap">
-												Password:{" "}
-												{savedPassword ||
-													savedGeneratedKey}
-											</p>
-											<button
-												type="button"
-												onClick={() =>
-													copy(
-														savedPassword ||
-															savedGeneratedKey!,
-													)
-												}
-												className="w-[20px] h-[20px] flex items-center justify-center cursor-pointer mask-size-[16px] bg-white/50 hover:bg-white/70 transition-all duration-300"
-												style={{
-													WebkitMask: `url("${icons.copy}") no-repeat center`,
-													mask: `url("${icons.copy}") no-repeat center`,
-												}}
-											/>
-										</div>
-									)}
+								{savedAdditionalPassword && (
+									<div className="grid grid-cols-[1fr_auto] items-center gap-[10px] h-[50px] px-[15px] bg-[#3361D8]/10 border-[#2E68C4]/50 rounded-[10px] max-w-full">
+										<p className="text-[16px] text-medium overflow-hidden text-ellipsis whitespace-nowrap">
+											Integrity Password:{" "}
+											{savedAdditionalPassword}
+										</p>
+										<button
+											type="button"
+											onClick={() =>
+												copy(savedAdditionalPassword)
+											}
+											className="w-[20px] h-[20px] flex items-center justify-center cursor-pointer mask-size-[16px] bg-white/50 hover:bg-white/70 transition-all duration-300"
+											style={{
+												WebkitMask: `url("${icons.copy}") no-repeat center`,
+												mask: `url("${icons.copy}") no-repeat center`,
+											}}
+										/>
+									</div>
+								)}
 							</div>
 						)}
 					</div>
@@ -381,14 +369,6 @@ const VaultEncryptRunStep = () => {
 									allTokens.push(res.masterToken);
 								}
 								if (
-									savedTokenType === "master" &&
-									(savedPassword || savedGeneratedKey)
-								) {
-									allTokens.push(
-										savedPassword || savedGeneratedKey,
-									);
-								}
-								if (
 									savedTokenType === "none" &&
 									(savedPassword || savedGeneratedKey)
 								) {
@@ -398,6 +378,9 @@ const VaultEncryptRunStep = () => {
 								}
 								if (res?.shares) {
 									allTokens.push(...res.shares);
+								}
+								if (savedAdditionalPassword) {
+									allTokens.push(savedAdditionalPassword);
 								}
 								if (allTokens.length > 0) {
 									copy(allTokens.join("\n"));

@@ -1,6 +1,7 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 import type { ContainerInfoData } from "interfaces";
 import {
+	ResealData,
 	SHAMIR_DEFAULT_THRESHOLD,
 	SHAMIR_DEFAULT_TOTAL,
 	VaultOpenWizardState,
@@ -39,6 +40,7 @@ const initialState: VaultSlice = {
 	containers: {},
 	recent: [],
 	containerInfo: {},
+	resealData: [],
 };
 
 export const vaultSlice = createSlice({
@@ -136,6 +138,23 @@ export const vaultSlice = createSlice({
 		},
 		vaultResetOpenWizardState: state => {
 			state.openWizardState = initialState.openWizardState;
+		},
+		vaultAddResealData: (state, { payload }: PayloadAction<ResealData>) => {
+			const exists = state.resealData.some(
+				data => data.containerPath === payload.containerPath,
+			);
+			if (exists) {
+				return;
+			}
+			state.resealData.push(payload);
+		},
+		vaultRemoveResealData: (state, { payload }: PayloadAction<string>) => {
+			state.resealData = state.resealData.filter(
+				data => data.containerPath !== payload,
+			);
+		},
+		vaultClearResealData: state => {
+			state.resealData = [];
 		},
 	},
 });

@@ -32,7 +32,7 @@ const VaultBasicStep = () => {
 	const pickSaveDir = useCallback(async () => {
 		const dir = await open({ directory: true, multiple: false });
 		if (typeof dir !== "string") return;
-		const safe = (name || "vault").replace(/[^a-z0-9_-]/gi, "_");
+		const safe = (name || "vault").replace(/[<>:"/\\|?*]/g, "_");
 		setOutputPath(await join(dir, `${safe}.tvlt`));
 	}, [name]);
 
@@ -130,7 +130,12 @@ const VaultBasicStep = () => {
 					icon={icons.arrow_right}
 					text="Next"
 					onClick={next}
-					disabled={busy}
+					disabled={
+						busy ||
+						!name.trim() ||
+						!inputPath.trim() ||
+						!outputPath.trim()
+					}
 					style={{ width: "fit-content" }}
 				/>
 			</div>

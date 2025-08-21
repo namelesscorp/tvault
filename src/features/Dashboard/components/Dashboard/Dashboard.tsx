@@ -2,6 +2,7 @@ import { Store as TauriStore } from "@tauri-apps/plugin-store";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { devLog, useRequestGuard } from "utils";
 import { useAppDispatch } from "features/Store";
 import { UIContainerRow, UISectionHeading } from "features/UI";
 import { useContainerInfo, useVault } from "features/Vault/hooks";
@@ -28,23 +29,41 @@ const Dashboard = () => {
 		error: infoError,
 		done: infoDone,
 	} = useContainerInfo();
+
+	const { fn: guardedFetchInfo } = useRequestGuard(fetchInfo);
+
 	const navigate = useNavigate();
 	const {
 		handleOpenFolder,
 		handleCloseContainer,
 		handleOpenClosedContainer,
-		handleEditContainer,
 	} = useVault(containerPath => {
 		setSelectedContainer(prev =>
 			prev && prev.path === containerPath
 				? { path: prev.path, mountDir: "" }
 				: prev,
 		);
+
+		if (containerPath) {
+			guardedFetchInfo(containerPath).catch(() => {});
+		}
 	});
 	const [selectedContainer, setSelectedContainer] = useState<{
 		path: string;
 		mountDir: string;
 	} | null>(null);
+
+	const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
+	const loadedRef = useRef<Set<string>>(new Set());
+
+	const selectedResealData = useSelector((state: any) =>
+		selectedContainer
+			? state.vault.resealData.find(
+					(data: any) =>
+						data.containerPath === selectedContainer.path,
+				)
+			: undefined,
+	);
 
 	const containerEntries = useMemo(
 		() => Object.entries(containers),
@@ -98,61 +117,168 @@ const Dashboard = () => {
 	const decorateTitle = useCallback(
 		(path: string) => {
 			const cached = infoMap[path];
+			const isLoading = loadingPaths.has(path);
+			if (isLoading) {
+				return `${path} (загрузка...)`;
+			}
 			return cached?.name || path;
 		},
-		[infoMap],
+		[infoMap, loadingPaths],
 	);
-
-	const [infoLoadingPath, setInfoLoadingPath] = useState<string | null>(null);
-	const loadedRef = useRef<Set<string>>(new Set());
 	const candidatePaths = useMemo(() => {
 		const opened = Object.keys(containers);
 		const recentOnly = recentClosed.map(r => r.path);
-		return Array.from(new Set([...opened, ...recentOnly]));
+		return Array.from(new Set([...opened, ...recentOnly])).filter(
+			path => path && path.trim() !== "",
+		);
 	}, [containers, recentClosed]);
 
 	useEffect(() => {
-		if (infoLoadingPath) {
+		const missingPaths = candidatePaths.filter(
+			p =>
+				!infoMap[p]?.name &&
+				!loadedRef.current.has(p) &&
+				!loadingPaths.has(p),
+		);
+
+		devLog("[Dashboard] candidatePaths:", candidatePaths);
+		devLog("[Dashboard] missingPaths:", missingPaths);
+		devLog("[Dashboard] loadingPaths:", Array.from(loadingPaths));
+
+		if (missingPaths.length === 0) {
+			const allCovered =
+				candidatePaths.length > 0 &&
+				candidatePaths.every(p => !!infoMap[p]?.name);
+			if (allCovered) {
+				(async () => {
+					try {
+						const store = await TauriStore.load(
+							"recent-containers.json",
+						);
+						await store.set("containerInfo", infoMap);
+						await store.save();
+					} catch {}
+				})();
+			}
 			return;
 		}
 
-		const nextMissing = candidatePaths.find(
-			p => !infoMap[p]?.name && !loadedRef.current.has(p),
-		);
+		const loadNext = async () => {
+			const nextPath = missingPaths[0];
+			if (!nextPath || nextPath.trim() === "") return;
 
-		if (nextMissing) {
-			setInfoLoadingPath(nextMissing);
-			loadedRef.current.add(nextMissing);
-			fetchInfo(nextMissing).catch(() => {});
-		}
+			setLoadingPaths(prev => new Set(prev).add(nextPath));
+			loadedRef.current.add(nextPath);
 
-		const allCovered =
-			candidatePaths.length > 0 &&
-			candidatePaths.every(p => !!infoMap[p]?.name);
-		if (allCovered) {
-			(async () => {
+			try {
+				await guardedFetchInfo(nextPath);
+			} catch (error) {
+				loadedRef.current.delete(nextPath);
 				try {
-					const store = await TauriStore.load(
-						"recent-containers.json",
-					);
-					await store.set("containerInfo", infoMap);
-					await store.save();
+					const errObj = error as any;
+					const msg =
+						typeof errObj === "string"
+							? errObj
+							: JSON.stringify(errObj);
+					const code =
+						typeof errObj === "object" && errObj?.error?.code
+							? Number(errObj.error.code)
+							: undefined;
+					const shouldRemove =
+						code === 0x0043 ||
+						code === 67 ||
+						code === 100 ||
+						msg.includes("open container error") ||
+						msg.includes("no such file or directory") ||
+						msg.includes("E-0043");
+					if (shouldRemove) {
+						dispatch(vaultRemoveRecent(nextPath));
+					}
 				} catch {}
-			})();
-		}
-	}, [candidatePaths, infoMap, infoLoadingPath, fetchInfo]);
+			} finally {
+				setLoadingPaths(prev => {
+					const newSet = new Set(prev);
+					newSet.delete(nextPath);
+					return newSet;
+				});
+			}
+		};
+
+		loadNext();
+	}, [candidatePaths, infoMap, loadingPaths, guardedFetchInfo, dispatch]);
 
 	useEffect(() => {
-		if (!infoLoadingPath || !infoDone) return;
+		if (!selectedContainer?.path) return;
+
+		const path = selectedContainer.path;
+		const hasInfo = infoMap[path]?.name;
+		const isCurrentlyLoading = loadingPaths.has(path);
+		const wasAlreadyTried = loadedRef.current.has(path);
+
+		if (!hasInfo && !isCurrentlyLoading) {
+			if (wasAlreadyTried) {
+				loadedRef.current.delete(path);
+			}
+
+			devLog(
+				"[Dashboard] Auto-loading info for selected container:",
+				path,
+			);
+			setLoadingPaths(prev => new Set(prev).add(path));
+			loadedRef.current.add(path);
+
+			guardedFetchInfo(path)
+				.catch(error => {
+					loadedRef.current.delete(path);
+					devLog("[Dashboard] Auto-load failed for:", path, error);
+					try {
+						const errObj = error as any;
+						const msg =
+							typeof errObj === "string"
+								? errObj
+								: JSON.stringify(errObj);
+						const code =
+							typeof errObj === "object" && errObj?.error?.code
+								? Number(errObj.error.code)
+								: undefined;
+						const shouldRemove =
+							code === 0x0043 ||
+							code === 67 ||
+							code === 100 ||
+							msg.includes("open container error") ||
+							msg.includes("no such file or directory") ||
+							msg.includes("E-0043");
+						if (shouldRemove) {
+							dispatch(vaultRemoveRecent(path));
+						}
+					} catch {}
+				})
+				.finally(() => {
+					setLoadingPaths(prev => {
+						const newSet = new Set(prev);
+						newSet.delete(path);
+						return newSet;
+					});
+				});
+		}
+	}, [
+		selectedContainer?.path,
+		infoMap,
+		loadingPaths,
+		guardedFetchInfo,
+		dispatch,
+	]);
+
+	useEffect(() => {
+		if (!infoDone || !infoResult) return;
 		const payload = infoResult as any;
-		if (payload && payload.path === infoLoadingPath && payload.data) {
+		if (payload && payload.path && payload.data) {
 			dispatch(
 				vaultSetContainerInfo({
 					path: payload.path,
 					info: payload.data,
 				}),
 			);
-			setInfoLoadingPath(null);
 			return;
 		}
 		if (infoError) {
@@ -165,7 +291,7 @@ const Dashboard = () => {
 				const pathFromErr =
 					typeof errObj === "object" && errObj?.path
 						? String(errObj.path)
-						: infoLoadingPath;
+						: undefined;
 				const code =
 					typeof errObj === "object" && errObj?.error?.code
 						? Number(errObj.error.code)
@@ -181,9 +307,8 @@ const Dashboard = () => {
 					dispatch(vaultRemoveRecent(pathFromErr));
 				}
 			} catch {}
-			setInfoLoadingPath(null);
 		}
-	}, [infoDone, infoResult, infoError, infoLoadingPath, dispatch]);
+	}, [infoDone, infoResult, infoError, dispatch]);
 
 	if (!hasContainers) {
 		return (
@@ -230,6 +355,12 @@ const Dashboard = () => {
 							}
 						/>
 					))}
+					{loadingPaths.size > 0 && (
+						<div className="flex items-center justify-center py-[10px] text-white/50 text-sm">
+							Loading info about containers... (
+							{loadingPaths.size} left)
+						</div>
+					)}
 				</div>
 				<DashboardContainerInfo
 					path={selectedContainer?.path || ""}
@@ -250,10 +381,11 @@ const Dashboard = () => {
 					onOpenFolder={() =>
 						handleOpenFolder(selectedContainer?.mountDir ?? "")
 					}
-					onClose={() =>
+					onClose={updatedResealData =>
 						handleCloseContainer(
 							selectedContainer?.path ?? "",
 							selectedContainer?.mountDir ?? "",
+							updatedResealData || selectedResealData,
 						)
 					}
 					onOpenClosed={() => {
@@ -261,11 +393,13 @@ const Dashboard = () => {
 						if (!path) return;
 						handleOpenClosedContainer(path);
 					}}
-					onEdit={handleEditContainer}
 					icons={{
 						folder: icons.folder,
 						lock: icons.lock,
 						pencil: icons.lock,
+						check: icons.check,
+						close: icons.close,
+						settings: icons.settings,
 					}}
 				/>
 			</div>

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { devError, devLog } from "utils";
 
 export interface DecryptArgs {
@@ -19,6 +19,7 @@ const useDecrypt = () => {
 	const [progress, setProgress] = useState(0);
 	const [done, setDone] = useState(false);
 	const [error, setError] = useState<unknown | null>(null);
+	const runningRef = useRef(false);
 
 	useEffect(() => {
 		const un1 = listen<number>("decrypt-progress", e => {
@@ -28,6 +29,9 @@ const useDecrypt = () => {
 		const un2 = listen<boolean>("decrypt-done", e => {
 			devLog("[tvault] decrypt done", e.payload);
 			setDone(e.payload);
+			if (e.payload) {
+				runningRef.current = false;
+			}
 		});
 
 		return () => {
@@ -37,6 +41,16 @@ const useDecrypt = () => {
 	}, []);
 
 	const run = async (args: DecryptArgs) => {
+		if (runningRef.current) {
+			devLog("[tvault] decrypt already running, skipping");
+			return;
+		}
+
+		runningRef.current = true;
+		setProgress(0);
+		setDone(false);
+		setError(null);
+
 		const payload: Record<string, unknown> = {
 			container_path: args.containerPath,
 			folder_path: args.folderPath,
@@ -71,6 +85,7 @@ const useDecrypt = () => {
 		} catch (err) {
 			devError("[tvault] run_decrypt failed", err);
 			setError(err);
+			runningRef.current = false;
 			throw err;
 		}
 	};

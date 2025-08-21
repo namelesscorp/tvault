@@ -1,3 +1,5 @@
+import { ContainerInfoData } from "interfaces";
+
 export type KeySource = "generated" | "manual";
 export type ShareEncoding = "base64" | "hex";
 export type CompressionType = "zip" | "none";
@@ -76,4 +78,19 @@ export interface VaultOpenWizardState {
 
 	/* quick open flow: skip selection/summary and jump between only required steps */
 	quickOpen?: boolean;
+}
+
+export interface ResealData {
+	containerPath: string;
+	mountDir: string;
+	containerInfo: ContainerInfoData;
+	passphrase?: string;
+	masterToken?: string;
+	shares?: string[];
+	tokenJsonPath?: string;
+	additionalPassword?: string;
+	originalAdditionalPassword?: string;
+	method: DecryptMethod;
+	tokenType: TokenType;
+	integrityProvider: IntegrityProvider;
 }

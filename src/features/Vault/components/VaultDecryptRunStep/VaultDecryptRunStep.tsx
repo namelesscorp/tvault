@@ -1,22 +1,63 @@
 import { openPath } from "@tauri-apps/plugin-opener";
 import { Store } from "@tauri-apps/plugin-store";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { useEffectOnce } from "react-use";
 import { RouteTypes } from "interfaces";
-import { devError } from "utils";
+import { createAsyncOnceGuard, devError, devLog, useRequestGuard } from "utils";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UISectionHeading } from "features/UI";
 import { icons } from "~/assets/collections/icons";
+import { ResealData } from "../../Vault.model";
 import { useDecrypt } from "../../hooks/useDecrypt";
-import { vaultAddRecentWithMountPath } from "../../state/Vault.actions";
+import {
+	vaultAddRecentWithMountPath,
+	vaultAddResealData,
+} from "../../state/Vault.actions";
 import { vaultSlice } from "../../state/Vault.reducer";
 import { selectVaultOpenWizardState } from "../../state/Vault.selectors";
 
-// guard against React StrictMode double-mount in dev
-let DECRYPT_RUN_GUARD = false;
+const saveRecentData = createAsyncOnceGuard(
+	async (containerPath: string, mountDir: string, dispatch: any) => {
+		try {
+			const store = await Store.load("recent-containers.json");
+			const KEY = "recent";
+			const recent =
+				(await store.get<
+					{
+						path: string;
+						lastOpenedAt: number;
+						lastMountPath?: string;
+					}[]
+				>(KEY)) ?? [];
+			console.log("Saving mount path:", {
+				path: containerPath,
+				mountPath: mountDir,
+			});
+			const filtered = recent.filter(
+				(r: { path: string }) => r.path !== containerPath,
+			);
+			filtered.unshift({
+				path: containerPath,
+				lastOpenedAt: Date.now(),
+				lastMountPath: mountDir,
+			});
+			const capped = filtered.slice(0, 100);
+			await store.set(KEY, capped);
+			await store.save();
+			console.log("Saved recent containers:", capped);
+			dispatch(
+				vaultAddRecentWithMountPath({
+					path: containerPath,
+					mountPath: mountDir,
+				}),
+			);
+		} catch (e) {
+			devError(e);
+		}
+	},
+);
 
 const VaultDecryptRunStep = () => {
 	const wizard = useSelector(selectVaultOpenWizardState);
@@ -24,46 +65,71 @@ const VaultDecryptRunStep = () => {
 	const dispatch = useAppDispatch();
 	const [savedMountDir, setSavedMountDir] = useState<string>("");
 	const [savedContainerPath, setSavedContainerPath] = useState<string>("");
+	const [resealDataSaved, setResealDataSaved] = useState(false);
+	const containerInfo = useSelector(
+		(state: any) => state.vault.containerInfo[savedContainerPath],
+	);
 
 	const { progress, done, error, run } = useDecrypt();
 
-	useEffectOnce(() => {
-		if (DECRYPT_RUN_GUARD) return;
-		DECRYPT_RUN_GUARD = true;
+	const { fn: guardedRun, reset: resetDecrypt } = useRequestGuard(run);
 
-		setSavedMountDir(wizard.mountDir);
-		setSavedContainerPath(wizard.containerPath);
-
-		const isPasswordMethod =
-			wizard.tokenType === "none" || wizard.tokenType === "master";
-		const isShamirMethod = wizard.tokenType === "share";
-
-		if (isPasswordMethod && !wizard.password) {
-			devError("Password is required for password method");
-			return;
+	useEffect(() => {
+		if (!savedMountDir && !savedContainerPath) {
+			setSavedMountDir(wizard.mountDir);
+			setSavedContainerPath(wizard.containerPath);
 		}
+	}, [
+		wizard.mountDir,
+		wizard.containerPath,
+		savedMountDir,
+		savedContainerPath,
+	]);
 
-		if (wizard.integrityProvider === "hmac" && !wizard.additionalPassword) {
-			devError(
-				"Additional password is required for HMAC integrity provider",
-			);
-			return;
-		}
+	useEffect(() => {
+		if (savedMountDir && savedContainerPath && !done && !error) {
+			const isPasswordMethod = wizard.tokenType === "none";
+			const isMasterMethod = wizard.tokenType === "master";
+			const isShamirMethod = wizard.tokenType === "share";
 
-		if (
-			isShamirMethod &&
-			!wizard.tokenJsonPath &&
-			(!wizard.shares || wizard.shares.length === 0)
-		) {
-			devError("Shares or token file are required for shamir method");
-			return;
-		}
+			if (isPasswordMethod && !wizard.password) {
+				devError("Password is required for password method");
+				return;
+			}
 
-		if (isPasswordMethod) {
-			if (wizard.tokenType === "none") {
-				run({
-					containerPath: wizard.containerPath,
-					folderPath: wizard.mountDir,
+			if (isMasterMethod && !wizard.masterToken) {
+				devError("Master token is required for master method");
+				return;
+			}
+
+			if (
+				wizard.integrityProvider === "hmac" &&
+				!wizard.additionalPassword
+			) {
+				devError(
+					"Additional password is required for HMAC integrity provider",
+				);
+				return;
+			}
+
+			if (
+				isShamirMethod &&
+				!wizard.tokenJsonPath &&
+				(!wizard.shares || wizard.shares.length === 0)
+			) {
+				devError("Shares or token file are required for shamir method");
+				return;
+			}
+
+			if (progress > 0) {
+				devLog("[tvault] decrypt already in progress, skipping");
+				return;
+			}
+
+			if (isPasswordMethod) {
+				guardedRun({
+					containerPath: savedContainerPath,
+					folderPath: savedMountDir,
 					passphrase: wizard.password!,
 					tokenReaderType: "flag",
 					tokenFormat: "plaintext",
@@ -73,128 +139,156 @@ const VaultDecryptRunStep = () => {
 							? wizard.additionalPassword
 							: undefined,
 				});
-			} else {
-				run({
-					containerPath: wizard.containerPath,
-					folderPath: wizard.mountDir,
-					passphrase: wizard.password!,
-					masterToken: wizard.masterToken,
-					additionalPassword:
-						wizard.integrityProvider === "hmac"
-							? wizard.additionalPassword
-							: undefined,
-				});
-			}
-		} else {
-			if (wizard.tokenJsonPath) {
-				run({
-					containerPath: wizard.containerPath,
-					folderPath: wizard.mountDir,
-					tokenReaderType: "file",
-					tokenFormat: "json",
-					tokenPath: wizard.tokenJsonPath,
-					additionalPassword:
-						wizard.integrityProvider === "hmac"
-							? wizard.additionalPassword
-							: undefined,
-				});
-			} else {
-				const filtered =
-					wizard.shares?.filter(s => s.trim().length > 0) || [];
-				run({
-					containerPath: wizard.containerPath,
-					folderPath: wizard.mountDir,
+			} else if (isMasterMethod) {
+				guardedRun({
+					containerPath: savedContainerPath,
+					folderPath: savedMountDir,
 					tokenReaderType: "flag",
 					tokenFormat: "plaintext",
-					tokenFlag: filtered.join("|"),
+					tokenFlag: wizard.masterToken!,
 					additionalPassword:
 						wizard.integrityProvider === "hmac"
 							? wizard.additionalPassword
 							: undefined,
 				});
-			}
-		}
-
-		return () => {
-			DECRYPT_RUN_GUARD = false;
-		};
-	});
-
-	if (done && !error) {
-		DECRYPT_RUN_GUARD = false;
-
-		dispatch(
-			vaultSlice.actions.vaultAddContainer({
-				containerPath: savedContainerPath,
-				mountDir: savedMountDir,
-			}),
-		);
-
-		(async () => {
-			try {
-				const store = await Store.load("recent-containers.json");
-				const KEY = "recent";
-				const recent =
-					(await store.get<
-						{
-							path: string;
-							lastOpenedAt: number;
-							lastMountPath?: string;
-						}[]
-					>(KEY)) ?? [];
-				console.log("Saving mount path:", {
-					path: savedContainerPath,
-					mountPath: savedMountDir,
-				});
-				const filtered = recent.filter(
-					(r: { path: string }) => r.path !== savedContainerPath,
-				);
-				filtered.unshift({
-					path: savedContainerPath,
-					lastOpenedAt: Date.now(),
-					lastMountPath: savedMountDir,
-				});
-				const capped = filtered.slice(0, 100);
-				await store.set(KEY, capped);
-				await store.save();
-				console.log("Saved recent containers:", capped);
-				dispatch(
-					vaultAddRecentWithMountPath({
-						path: savedContainerPath,
-						mountPath: savedMountDir,
-					}),
-				);
-			} catch (e) {
-				devError(e);
-			}
-		})();
-
-		(async () => {
-			if (savedMountDir) {
-				try {
-					await openPath(savedMountDir);
-				} catch (e) {
-					devError(e);
+			} else {
+				if (wizard.tokenJsonPath) {
+					guardedRun({
+						containerPath: savedContainerPath,
+						folderPath: savedMountDir,
+						tokenReaderType: "file",
+						tokenFormat: "json",
+						tokenPath: wizard.tokenJsonPath,
+						additionalPassword:
+							wizard.integrityProvider === "hmac"
+								? wizard.additionalPassword
+								: undefined,
+					});
+				} else {
+					const filtered =
+						wizard.shares?.filter(s => s.trim().length > 0) || [];
+					guardedRun({
+						containerPath: savedContainerPath,
+						folderPath: savedMountDir,
+						tokenReaderType: "flag",
+						tokenFormat: "plaintext",
+						tokenFlag: filtered.join("|"),
+						additionalPassword:
+							wizard.integrityProvider === "hmac"
+								? wizard.additionalPassword
+								: undefined,
+					});
 				}
 			}
-		})();
-
-		try {
-			dispatch(vaultSlice.actions.vaultResetOpenWizardState());
-		} catch {}
-	}
-
-	const openMountFolder = async () => {
-		if (!savedMountDir) return;
-		try {
-			await openPath(savedMountDir);
-		} catch (e) {
-			devError(e);
-			toast.error("Failed to open folder");
 		}
-	};
+	}, [
+		savedMountDir,
+		savedContainerPath,
+		wizard,
+		done,
+		error,
+		guardedRun,
+		progress,
+	]);
+
+	useEffect(() => {
+		if (done && !error && !resealDataSaved) {
+			setResealDataSaved(true);
+
+			const resealData: ResealData = {
+				containerPath: savedContainerPath,
+				mountDir: savedMountDir,
+				containerInfo: containerInfo || {},
+				passphrase: wizard.password,
+				masterToken: wizard.masterToken,
+				shares: wizard.shares,
+				tokenJsonPath: wizard.tokenJsonPath,
+				additionalPassword: wizard.additionalPassword,
+				originalAdditionalPassword: wizard.additionalPassword,
+				method: wizard.method,
+				tokenType: wizard.tokenType,
+				integrityProvider: wizard.integrityProvider,
+			};
+
+			if (!wizard.password && wizard.tokenType === "none") {
+				devError("No password found for passphrase-only container!");
+			}
+			if (
+				!wizard.password &&
+				wizard.tokenType === "master" &&
+				!wizard.masterToken
+			) {
+				devError(
+					"No password or master token found for master token container!",
+				);
+			}
+			if (
+				wizard.tokenType === "share" &&
+				(!wizard.shares || wizard.shares.length === 0)
+			) {
+				devError("No shares found for shamir container!");
+			}
+
+			dispatch(vaultAddResealData(resealData));
+			devLog("Adding reseal data:", resealData);
+			devLog("Container info from state:", containerInfo);
+			devLog("Wizard data:", {
+				password: wizard.password ? "***" : "undefined",
+				masterToken: wizard.masterToken ? "***" : "undefined",
+				shares: wizard.shares?.length || 0,
+				additionalPassword: wizard.additionalPassword
+					? "***"
+					: "undefined",
+				tokenType: wizard.tokenType,
+				integrityProvider: wizard.integrityProvider,
+			});
+			devLog("Wizard password length:", wizard.password?.length || 0);
+			devLog("Wizard password exists:", !!wizard.password);
+
+			dispatch(
+				vaultSlice.actions.vaultAddContainer({
+					containerPath: savedContainerPath,
+					mountDir: savedMountDir,
+				}),
+			);
+
+			(async () => {
+				await saveRecentData(
+					savedContainerPath,
+					savedMountDir,
+					dispatch,
+				);
+			})();
+
+			(async () => {
+				if (savedMountDir) {
+					try {
+						await openPath(savedMountDir);
+					} catch (e) {
+						devError(e);
+					}
+				}
+			})();
+
+			try {
+				dispatch(vaultSlice.actions.vaultResetOpenWizardState());
+			} catch {}
+		}
+	}, [
+		done,
+		error,
+		resealDataSaved,
+		savedContainerPath,
+		savedMountDir,
+		containerInfo,
+		wizard,
+		dispatch,
+	]);
 
 	if (error) {
+		resetDecrypt();
+		setResealDataSaved(false);
+
 		return (
 			<div>
 				<UISectionHeading icon={icons.unlock} text={"Open"} />
@@ -247,6 +341,16 @@ const VaultDecryptRunStep = () => {
 			</div>
 		);
 	}
+
+	const openMountFolder = async () => {
+		if (!savedMountDir) return;
+		try {
+			await openPath(savedMountDir);
+		} catch (e) {
+			devError(e);
+			toast.error("Failed to open folder");
+		}
+	};
 
 	return (
 		<div>

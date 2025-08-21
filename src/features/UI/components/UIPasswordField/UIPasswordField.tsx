@@ -5,6 +5,7 @@ import { UIInput } from "../UIInput";
 export interface UIPasswordFieldProps {
 	value: string;
 	onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+	onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 	placeholder?: string;
 	className?: string;
 	style?: React.CSSProperties;
@@ -14,6 +15,7 @@ export interface UIPasswordFieldProps {
 const UIPasswordField = ({
 	value,
 	onChange,
+	onKeyDown,
 	placeholder = "Enter password",
 	style,
 	disabled,
@@ -26,6 +28,7 @@ const UIPasswordField = ({
 				type={show ? "text" : "password"}
 				value={value}
 				onChange={onChange}
+				onKeyDown={onKeyDown}
 				placeholder={placeholder}
 				disabled={disabled}
 				style={{ paddingRight: "50px" }}
