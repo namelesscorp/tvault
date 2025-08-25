@@ -1,8 +1,15 @@
 import { Store as TauriStore } from "@tauri-apps/plugin-store";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { devLog, useRequestGuard } from "utils";
+import {
+	cn,
+	devLog,
+	extractErrorMessage,
+	shouldRemoveContainerOnError,
+	useRequestGuard,
+} from "utils";
 import { useAppDispatch } from "features/Store";
 import { UIContainerRow, UISectionHeading } from "features/UI";
 import { useContainerInfo, useVault } from "features/Vault/hooks";
@@ -10,15 +17,18 @@ import {
 	vaultRemoveRecent,
 	vaultSetContainerInfo,
 } from "features/Vault/state/Vault.actions";
+import { isContainerAccessible } from "features/Vault/state/Vault.actions";
 import {
 	selectVaultContainerInfo,
 	selectVaultContainers,
 	selectVaultRecent,
 } from "features/Vault/state/Vault.selectors";
 import { icons } from "assets/collections/icons";
+import { LocalizationTypes, useLocale } from "~/features/Localization";
 import { DashboardContainerInfo } from "../DashboardContainerInfo";
 
 const Dashboard = () => {
+	const { formatMessage } = useIntl();
 	const containers = useSelector(selectVaultContainers);
 	const recent = useSelector(selectVaultRecent);
 	const dispatch = useAppDispatch();
@@ -29,6 +39,7 @@ const Dashboard = () => {
 		error: infoError,
 		done: infoDone,
 	} = useContainerInfo();
+	const { locale } = useLocale();
 
 	const { fn: guardedFetchInfo } = useRequestGuard(fetchInfo);
 
@@ -55,6 +66,13 @@ const Dashboard = () => {
 
 	const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
 	const loadedRef = useRef<Set<string>>(new Set());
+
+	useEffect(() => {
+		return () => {
+			loadedRef.current.clear();
+			setLoadingPaths(new Set());
+		};
+	}, []);
 
 	const selectedResealData = useSelector((state: any) =>
 		selectedContainer
@@ -119,7 +137,7 @@ const Dashboard = () => {
 			const cached = infoMap[path];
 			const isLoading = loadingPaths.has(path);
 			if (isLoading) {
-				return `${path} (загрузка...)`;
+				return `${path} (${formatMessage({ id: "container.loading" })}...)`;
 			}
 			return cached?.name || path;
 		},
@@ -167,31 +185,33 @@ const Dashboard = () => {
 			const nextPath = missingPaths[0];
 			if (!nextPath || nextPath.trim() === "") return;
 
+			if (loadingPaths.has(nextPath) || loadedRef.current.has(nextPath)) {
+				return;
+			}
+
 			setLoadingPaths(prev => new Set(prev).add(nextPath));
 			loadedRef.current.add(nextPath);
 
 			try {
+				const isAccessible = await isContainerAccessible(nextPath);
+				if (!isAccessible) {
+					devLog(
+						"[Dashboard] Container not accessible, removing:",
+						nextPath,
+					);
+					dispatch(vaultRemoveRecent(nextPath));
+					return;
+				}
+
 				await guardedFetchInfo(nextPath);
 			} catch (error) {
 				loadedRef.current.delete(nextPath);
 				try {
-					const errObj = error as any;
-					const msg =
-						typeof errObj === "string"
-							? errObj
-							: JSON.stringify(errObj);
-					const code =
-						typeof errObj === "object" && errObj?.error?.code
-							? Number(errObj.error.code)
-							: undefined;
-					const shouldRemove =
-						code === 0x0043 ||
-						code === 67 ||
-						code === 100 ||
-						msg.includes("open container error") ||
-						msg.includes("no such file or directory") ||
-						msg.includes("E-0043");
-					if (shouldRemove) {
+					devLog(
+						"[Dashboard] Container info error:",
+						extractErrorMessage(error),
+					);
+					if (shouldRemoveContainerOnError(error)) {
 						dispatch(vaultRemoveRecent(nextPath));
 					}
 				} catch {}
@@ -205,7 +225,7 @@ const Dashboard = () => {
 		};
 
 		loadNext();
-	}, [candidatePaths, infoMap, loadingPaths, guardedFetchInfo, dispatch]);
+	}, [candidatePaths, infoMap, guardedFetchInfo, dispatch]);
 
 	useEffect(() => {
 		if (!selectedContainer?.path) return;
@@ -215,11 +235,7 @@ const Dashboard = () => {
 		const isCurrentlyLoading = loadingPaths.has(path);
 		const wasAlreadyTried = loadedRef.current.has(path);
 
-		if (!hasInfo && !isCurrentlyLoading) {
-			if (wasAlreadyTried) {
-				loadedRef.current.delete(path);
-			}
-
+		if (!hasInfo && !isCurrentlyLoading && !wasAlreadyTried) {
 			devLog(
 				"[Dashboard] Auto-loading info for selected container:",
 				path,
@@ -227,28 +243,27 @@ const Dashboard = () => {
 			setLoadingPaths(prev => new Set(prev).add(path));
 			loadedRef.current.add(path);
 
-			guardedFetchInfo(path)
+			isContainerAccessible(path)
+				.then(isAccessible => {
+					if (!isAccessible) {
+						devLog(
+							"[Dashboard] Selected container not accessible, removing:",
+							path,
+						);
+						dispatch(vaultRemoveRecent(path));
+						return;
+					}
+					return guardedFetchInfo(path);
+				})
 				.catch(error => {
 					loadedRef.current.delete(path);
-					devLog("[Dashboard] Auto-load failed for:", path, error);
+					devLog(
+						"[Dashboard] Auto-load failed for:",
+						path,
+						extractErrorMessage(error),
+					);
 					try {
-						const errObj = error as any;
-						const msg =
-							typeof errObj === "string"
-								? errObj
-								: JSON.stringify(errObj);
-						const code =
-							typeof errObj === "object" && errObj?.error?.code
-								? Number(errObj.error.code)
-								: undefined;
-						const shouldRemove =
-							code === 0x0043 ||
-							code === 67 ||
-							code === 100 ||
-							msg.includes("open container error") ||
-							msg.includes("no such file or directory") ||
-							msg.includes("E-0043");
-						if (shouldRemove) {
+						if (shouldRemoveContainerOnError(error)) {
 							dispatch(vaultRemoveRecent(path));
 						}
 					} catch {}
@@ -261,13 +276,7 @@ const Dashboard = () => {
 					});
 				});
 		}
-	}, [
-		selectedContainer?.path,
-		infoMap,
-		loadingPaths,
-		guardedFetchInfo,
-		dispatch,
-	]);
+	}, [selectedContainer?.path, infoMap, guardedFetchInfo, dispatch]);
 
 	useEffect(() => {
 		if (!infoDone || !infoResult) return;
@@ -283,27 +292,17 @@ const Dashboard = () => {
 		}
 		if (infoError) {
 			try {
-				const errObj = infoError as any;
-				const msg =
-					typeof errObj === "string"
-						? errObj
-						: JSON.stringify(errObj);
+				devLog(
+					"[Dashboard] Container info error:",
+					extractErrorMessage(infoError),
+				);
 				const pathFromErr =
-					typeof errObj === "object" && errObj?.path
-						? String(errObj.path)
+					typeof infoError === "object" &&
+					infoError !== null &&
+					"path" in infoError
+						? String((infoError as any).path)
 						: undefined;
-				const code =
-					typeof errObj === "object" && errObj?.error?.code
-						? Number(errObj.error.code)
-						: undefined;
-				const shouldRemove =
-					code === 0x0043 ||
-					code === 67 ||
-					code === 100 ||
-					msg.includes("open container error") ||
-					msg.includes("no such file or directory") ||
-					msg.includes("E-0043");
-				if (shouldRemove && pathFromErr) {
+				if (shouldRemoveContainerOnError(infoError) && pathFromErr) {
 					dispatch(vaultRemoveRecent(pathFromErr));
 				}
 			} catch {}
@@ -314,7 +313,7 @@ const Dashboard = () => {
 		return (
 			<section>
 				<p className="text-[20px] text-white/50 text-center">
-					Containers not found
+					{formatMessage({ id: "dashboard.notFound" })}
 				</p>
 			</section>
 		);
@@ -322,8 +321,17 @@ const Dashboard = () => {
 
 	return (
 		<section className="flex flex-col gap-[20px]">
-			<UISectionHeading icon={icons.folder} text={"Containers"} />
-			<div className="grid grid-cols-2 gap-[20px] items-start">
+			<UISectionHeading
+				icon={icons.folder}
+				text={formatMessage({ id: "dashboard.containers" })}
+			/>
+			<div
+				className={cn(
+					"grid gap-[20px] items-start",
+					locale === LocalizationTypes.Russian
+						? "grid-cols-[43%_1fr]"
+						: "grid-cols-2",
+				)}>
 				<div className="flex flex-col gap-[12px] col-span-1 max-h-[660px] overflow-y-auto pb-[20px] pr-[1px]">
 					{containerEntries.map(([containerPath, mountDir]) => (
 						<UIContainerRow
@@ -357,8 +365,10 @@ const Dashboard = () => {
 					))}
 					{loadingPaths.size > 0 && (
 						<div className="flex items-center justify-center py-[10px] text-white/50 text-sm">
-							Loading info about containers... (
-							{loadingPaths.size} left)
+							{formatMessage(
+								{ id: "dashboard.loading" },
+								{ count: loadingPaths.size },
+							)}
 						</div>
 					)}
 				</div>
@@ -392,14 +402,6 @@ const Dashboard = () => {
 						const path = selectedContainer?.path;
 						if (!path) return;
 						handleOpenClosedContainer(path);
-					}}
-					icons={{
-						folder: icons.folder,
-						lock: icons.lock,
-						pencil: icons.lock,
-						check: icons.check,
-						close: icons.close,
-						settings: icons.settings,
 					}}
 				/>
 			</div>

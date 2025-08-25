@@ -21,7 +21,9 @@ const UIRadioCard = ({
 			},
 		)}
 		onClick={onClick}>
-		<p className="text-[16px] text-white text-medium">{title}</p>
+		<p className="text-[16px] text-white text-medium text-center">
+			{title}
+		</p>
 		<p className="text-[14px] text-white/30 text-medium text-center">
 			{subtitle}
 		</p>

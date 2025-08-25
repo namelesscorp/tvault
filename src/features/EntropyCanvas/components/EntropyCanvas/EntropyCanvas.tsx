@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
+import { useIntl } from "react-intl";
 
 const TARGET_BITS = 512;
 const BATCH_SIZE = 48;
 
 const EntropyCanvas = ({ onReady }: { onReady: () => void }) => {
+	const { formatMessage } = useIntl();
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const [bits, setBits] = useState(0);
 	const buffer = useRef<number[]>([]);
@@ -66,7 +68,10 @@ const EntropyCanvas = ({ onReady }: { onReady: () => void }) => {
 				</div>
 			</div>
 			<p className="text-[16px] text-white/50 text-medium">
-				Generated {bits} / {TARGET_BITS} bits of entropy
+				{formatMessage(
+					{ id: "entropy.generated" },
+					{ count: bits, total: TARGET_BITS },
+				)}
 			</p>
 		</div>
 	);

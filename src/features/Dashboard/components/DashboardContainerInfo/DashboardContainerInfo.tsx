@@ -1,10 +1,12 @@
 import { Fragment } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import type { ContainerInfoData } from "interfaces";
 import { formatLocalDateTime } from "utils";
 import { UIButton, UIEditableField } from "features/UI";
 import { useContainerEdit } from "features/Vault/hooks";
 import { selectVaultResealDataByPath } from "features/Vault/state/Vault.selectors";
+import { icons } from "assets/collections/icons";
 
 export interface DashboardContainerInfoProps {
 	path: string;
@@ -15,14 +17,6 @@ export interface DashboardContainerInfoProps {
 	onOpenFolder: () => void;
 	onClose: (resealData?: any) => void;
 	onOpenClosed: () => void;
-	icons: {
-		folder: string;
-		lock: string;
-		pencil?: string;
-		check?: string;
-		close?: string;
-		settings?: string;
-	};
 }
 
 export const DashboardContainerInfo: React.FC<DashboardContainerInfoProps> = ({
@@ -34,8 +28,8 @@ export const DashboardContainerInfo: React.FC<DashboardContainerInfoProps> = ({
 	onOpenFolder,
 	onClose,
 	onOpenClosed,
-	icons,
 }) => {
+	const { formatMessage } = useIntl();
 	const currentResealData = useSelector((state: any) =>
 		selectVaultResealDataByPath(state, path),
 	);
@@ -56,30 +50,29 @@ export const DashboardContainerInfo: React.FC<DashboardContainerInfoProps> = ({
 					<Fragment>
 						<UIButton
 							icon={icons.folder}
-							text="Open folder"
+							text={formatMessage({ id: "container.openFolder" })}
 							onClick={onOpenFolder}
 							style={{ width: "fit-content" }}
 						/>
 						{isEditing ? (
 							<UIButton
 								icon={icons.check}
-								text="Save"
+								text={formatMessage({ id: "common.save" })}
 								onClick={saveEdit}
 								style={{ width: "fit-content" }}
 							/>
 						) : (
 							<UIButton
-								icon={icons.settings}
-								text="Edit"
+								icon={icons.pencil}
+								text={formatMessage({ id: "common.edit" })}
 								onClick={startEdit}
 								style={{ width: "fit-content" }}
 							/>
 						)}
 						<UIButton
 							icon={icons.lock}
-							text="Close"
+							text={formatMessage({ id: "common.close" })}
 							onClick={() => {
-								// Всегда применяем изменения из editData к resealData, если они есть
 								if (currentResealData) {
 									const updatedResealData =
 										applyEditToResealData(
@@ -96,7 +89,7 @@ export const DashboardContainerInfo: React.FC<DashboardContainerInfoProps> = ({
 				) : (
 					<UIButton
 						icon={icons.lock}
-						text="Open"
+						text={formatMessage({ id: "common.open" })}
 						onClick={onOpenClosed}
 						style={{ width: "fit-content" }}
 					/>
@@ -104,11 +97,17 @@ export const DashboardContainerInfo: React.FC<DashboardContainerInfoProps> = ({
 			</div>
 
 			<div className="mt-[16px] grid grid-cols-2 gap-y-[12px] text-[15px] text-white">
-				<p className="opacity-50">Version:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.version" })}:
+				</p>
 				<p>{info?.version ?? "—"}</p>
-				<p className="opacity-50">Path:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.path" })}:
+				</p>
 				<p className="break-all">{path}</p>
-				<p className="opacity-50">Name:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.name" })}:
+				</p>
 				<UIEditableField
 					value={
 						isEditing
@@ -121,7 +120,9 @@ export const DashboardContainerInfo: React.FC<DashboardContainerInfoProps> = ({
 					isEditing={isEditing}
 					placeholder="Enter name"
 				/>
-				<p className="opacity-50">Comment:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.comment" })}:
+				</p>
 				<UIEditableField
 					value={
 						isEditing
@@ -134,11 +135,17 @@ export const DashboardContainerInfo: React.FC<DashboardContainerInfoProps> = ({
 					isEditing={isEditing}
 					placeholder="Enter comment"
 				/>
-				<p className="opacity-50">Created:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.created" })}:
+				</p>
 				<p>{formatLocalDateTime(info?.created_at)}</p>
-				<p className="opacity-50">Last reseal:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.lastReseal" })}:
+				</p>
 				<p>{formatLocalDateTime(info?.updated_at)}</p>
-				<p className="opacity-50">Tags:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.tags" })}:
+				</p>
 				<UIEditableField
 					value={
 						isEditing
@@ -159,25 +166,44 @@ export const DashboardContainerInfo: React.FC<DashboardContainerInfoProps> = ({
 					onSave={saveEdit}
 					onCancel={cancelEdit}
 					isEditing={isEditing}
-					placeholder="Enter tags (comma separated)"
+					placeholder={formatMessage({
+						id: "container.tagsPlaceholder",
+					})}
 				/>
-				<p className="opacity-50">Token:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.token" })}:
+				</p>
 				<p>{info?.token_type ?? "—"}</p>
-				<p className="opacity-50">Integrity:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.integrity" })}:
+				</p>
 				<p>{info?.integrity_provider_type ?? "—"}</p>
 				{info?.integrity_provider_type === "hmac" && (
 					<Fragment>
-						<p className="opacity-50">Integrity Password:</p>
+						<p className="opacity-50">
+							{formatMessage({
+								id: "container.integrityPassword",
+							})}
+							:
+						</p>
 						<p>••••••••</p>
 					</Fragment>
 				)}
-				<p className="opacity-50">Compression:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.compression" })}:
+				</p>
 				<p>{info?.compression_type ?? "—"}</p>
-				<p className="opacity-50">Shares:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.shares" })}:
+				</p>
 				<p>{info?.shares ?? "—"}</p>
-				<p className="opacity-50">Threshold:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.threshold" })}:
+				</p>
 				<p>{info?.threshold ?? "—"}</p>
-				<p className="opacity-50">Mount path:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.mountPath" })}:
+				</p>
 				<p className="break-all">{mountDir || savedMountPath || "—"}</p>
 			</div>
 		</div>

@@ -24,4 +24,5 @@ export enum RouteTypes {
 	VaultOpenSummary = "/open/summary",
 	VaultOpenRun = "/open/run",
 	ContainerDetails = "/container/:id",
+	Settings = "/settings",
 }

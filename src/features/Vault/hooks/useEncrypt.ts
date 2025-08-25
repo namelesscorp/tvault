@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
-import { devError, devLog } from "utils";
+import { devError, devLog, extractErrorMessage } from "utils";
 import type { VaultWizardState } from "../Vault.model";
 
 const useEncrypt = (wizardState: VaultWizardState) => {
@@ -29,7 +29,7 @@ const useEncrypt = (wizardState: VaultWizardState) => {
 			setResult(e.payload as Record<string, unknown>);
 		});
 		const un4 = listen<string>("encrypt-error", e => {
-			devError("[tvault] stderr", e.payload);
+			devError("[tvault] stderr", extractErrorMessage(e.payload));
 			setError(e.payload);
 		});
 		const un5 = listen<string>("encrypt-stdout", e => {

@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { RouteTypes } from "interfaces";
@@ -12,6 +13,7 @@ const VaultCommentStep = () => {
 	const wizard = useSelector(selectVaultWizardState);
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
+	const { formatMessage } = useIntl();
 
 	const [comment, setComment] = useState(wizard.comment || "");
 	const [tags, setTags] = useState(wizard.tags || "");
@@ -23,28 +25,37 @@ const VaultCommentStep = () => {
 
 	return (
 		<div>
-			<UISectionHeading icon={icons.lock} text={"Create"} />
+			<UISectionHeading
+				icon={icons.lock}
+				text={formatMessage({ id: "title.create" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 1 / 6 — Comment and Tags
+				{formatMessage({ id: "vault.comment.step" })}
 			</p>
 			<div className="flex flex-col gap-[20px] p-[20px] bg-white/5 rounded-[10px] mt-[20px]">
 				<div className="flex flex-col gap-[10px]">
 					<p className="text-[20px] text-white text-medium">
-						Comment:
+						{formatMessage({ id: "vault.comment.name" })}:
 					</p>
 					<UIInput
 						value={comment}
 						onChange={e => setComment(e.target.value)}
-						placeholder="Enter comment"
+						placeholder={formatMessage({
+							id: "vault.comment.commentPlaceholder",
+						})}
 						style={{ maxWidth: "50%" }}
 					/>
 				</div>
 				<div className="flex flex-col gap-[10px]">
-					<p className="text-[20px] text-white text-medium">Tags:</p>
+					<p className="text-[20px] text-white text-medium">
+						{formatMessage({ id: "vault.comment.tags" })}:
+					</p>
 					<UIInput
 						value={tags}
 						onChange={e => setTags(e.target.value)}
-						placeholder="Enter tags"
+						placeholder={formatMessage({
+							id: "vault.comment.tagsPlaceholder",
+						})}
 						style={{ maxWidth: "50%" }}
 					/>
 				</div>
@@ -52,13 +63,13 @@ const VaultCommentStep = () => {
 			<div className="flex items-center gap-[10px] mt-[20px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={() => navigate(-1)}
 					style={{ width: "fit-content" }}
 				/>
 				<UIButton
 					icon={icons.arrow_right}
-					text="Next"
+					text={formatMessage({ id: "common.next" })}
 					onClick={next}
 					style={{ width: "fit-content" }}
 				/>

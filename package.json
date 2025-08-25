@@ -13,9 +13,7 @@
     "build": "yarn build:dev",
     "build:dev": "tsc && vite build --mode development",
     "build:prod": "tsc && vite build --mode production",
-    "tauri:build": "yarn tauri:build:dev",
-    "tauri:build:dev": "yarn build:dev && yarn tauri build",
-    "tauri:build:prod": "yarn build:prod && yarn tauri build"
+    "tauri:build": "yarn tauri build"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
@@ -28,6 +26,7 @@
     "clsx": "^2.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-intl": "^7.1.11",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.6.1",
     "react-toastify": "^11.0.5",

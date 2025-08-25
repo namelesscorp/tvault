@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -6,13 +7,16 @@ import { RouteTypes } from "interfaces";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UIPasswordField, UISectionHeading } from "features/UI";
 import { icons } from "~/assets/collections/icons";
+import { LocalizationTypes, useLocale } from "~/features/Localization";
 import { vaultSetOpenWizardState } from "../../state/Vault.actions";
 import { selectVaultOpenWizardState } from "../../state/Vault.selectors";
 
 const VaultPasswordStep = () => {
+	const { formatMessage } = useIntl();
 	const wizard = useSelector(selectVaultOpenWizardState);
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
+	const { locale } = useLocale();
 
 	const [pwd, setPwd] = useState(wizard.password || "");
 	const [masterToken, setMasterToken] = useState(wizard.masterToken || "");
@@ -51,34 +55,46 @@ const VaultPasswordStep = () => {
 		<div>
 			<UISectionHeading icon={icons.lock} text="Open" />
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 2 / 4 —{" "}
-				{wizard.tokenType === "master"
-					? "Master Token"
-					: "Container Password"}
+				{formatMessage({
+					id: `vault.passwordStep.step.${wizard.tokenType}`,
+				})}
 			</p>
 			<div className="flex flex-col gap-[20px] p-[20px] bg-white/5 rounded-[10px] mt-[20px]">
 				{wizard.tokenType === "master" ? (
 					<div className="flex flex-col gap-[10px]">
 						<p className="text-[20px] text-white text-medium">
-							Master token:
+							{formatMessage({
+								id: "vault.passwordStep.masterToken",
+							})}
+							:
 						</p>
 						<UIPasswordField
 							value={masterToken}
 							onChange={e => setMasterToken(e.target.value)}
 							placeholder="Master token"
-							style={{ maxWidth: "50%" }}
+							style={{
+								maxWidth:
+									locale === LocalizationTypes.Russian
+										? "75%"
+										: "50%",
+							}}
 						/>
 					</div>
 				) : (
 					<div className="flex flex-col gap-[10px]">
 						<p className="text-[20px] text-white text-medium">
-							Container password for decrypt:
+							{formatMessage({ id: "vault.passwordStep.none" })}:
 						</p>
 						<UIPasswordField
 							value={pwd}
 							onChange={e => setPwd(e.target.value)}
 							placeholder="Enter"
-							style={{ maxWidth: "50%" }}
+							style={{
+								maxWidth:
+									locale === LocalizationTypes.Russian
+										? "75%"
+										: "50%",
+							}}
 						/>
 					</div>
 				)}
@@ -86,13 +102,13 @@ const VaultPasswordStep = () => {
 			<div className="flex items-center gap-[10px] mt-[20px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={() => navigate(-1)}
 					style={{ width: "fit-content" }}
 				/>
 				<UIButton
 					icon={icons.arrow_right}
-					text="Next"
+					text={formatMessage({ id: "common.next" })}
 					onClick={next}
 					disabled={
 						wizard.tokenType === "master"

@@ -1,6 +1,7 @@
 import { openPath } from "@tauri-apps/plugin-opener";
 import { Store } from "@tauri-apps/plugin-store";
 import { useEffect, useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -60,6 +61,7 @@ const saveRecentData = createAsyncOnceGuard(
 );
 
 const VaultDecryptRunStep = () => {
+	const { formatMessage } = useIntl();
 	const wizard = useSelector(selectVaultOpenWizardState);
 	const navigate = useNavigate();
 	const dispatch = useAppDispatch();
@@ -291,9 +293,12 @@ const VaultDecryptRunStep = () => {
 
 		return (
 			<div>
-				<UISectionHeading icon={icons.unlock} text={"Open"} />
+				<UISectionHeading
+					icon={icons.unlock}
+					text={formatMessage({ id: "title.open" })}
+				/>
 				<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-					Opening container
+					{formatMessage({ id: "vault.decryptRun.step.opening" })}
 				</p>
 				<div className="mt-[16px] grid grid-cols-[auto_1fr] gap-x-[30px] gap-y-[12px] p-[15px] bg-white/5 rounded-[10px] text-[15px] text-white">
 					<p className="opacity-50">Error:</p>
@@ -320,9 +325,12 @@ const VaultDecryptRunStep = () => {
 	if (!done) {
 		return (
 			<div>
-				<UISectionHeading icon={icons.unlock} text={"Open"} />
+				<UISectionHeading
+					icon={icons.unlock}
+					text={formatMessage({ id: "title.open" })}
+				/>
 				<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-					Opening container
+					{formatMessage({ id: "vault.decryptRun.step.opening" })}
 				</p>
 				<div className="flex flex-col items-center gap-[20px] mt-[20px]">
 					<div className="w-[320px]">
@@ -335,7 +343,10 @@ const VaultDecryptRunStep = () => {
 						</div>
 					</div>
 					<p className="text-[16px] text-white/50 text-medium">
-						Progress: {progress}%
+						{formatMessage({
+							id: "vault.decryptRun.step.progress",
+						})}
+						: {progress}%
 					</p>
 				</div>
 			</div>
@@ -348,21 +359,27 @@ const VaultDecryptRunStep = () => {
 			await openPath(savedMountDir);
 		} catch (e) {
 			devError(e);
-			toast.error("Failed to open folder");
+			toast.error(formatMessage({ id: "common.openFolderError" }));
 		}
 	};
 
 	return (
 		<div>
-			<UISectionHeading icon={icons.unlock} text={"Open"} />
+			<UISectionHeading
+				icon={icons.unlock}
+				text={formatMessage({ id: "title.open" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Decrypted folder
+				{formatMessage({ id: "vault.decryptRun.step.decryptedFolder" })}
 			</p>
 			<div className="flex flex-col gap-[20px]">
 				<div className="grid grid-cols-[1fr_1fr] gap-[20px] mt-[20px]">
 					<div className="flex items-center p-[15px] gap-[10px] bg-white/5 rounded-[10px] text-white min-w-0">
 						<p className="opacity-50 whitespace-nowrap">
-							Folder path:
+							{formatMessage({
+								id: "vault.decryptRun.step.folderPath",
+							})}
+							:
 						</p>
 						<p
 							className="text-[16px] text-medium text-white overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0"
@@ -373,13 +390,13 @@ const VaultDecryptRunStep = () => {
 					<div className="flex items-center gap-[10px]">
 						<UIButton
 							icon={icons.folder}
-							text="Open folder"
+							text={formatMessage({ id: "common.openFolder" })}
 							onClick={openMountFolder}
 							style={{ width: "fit-content" }}
 						/>
 						<UIButton
 							icon={icons.check}
-							text="Done"
+							text={formatMessage({ id: "common.done" })}
 							onClick={() => navigate(RouteTypes.Dashboard)}
 							style={{ width: "fit-content" }}
 						/>

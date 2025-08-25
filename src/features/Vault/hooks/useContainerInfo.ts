@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useState } from "react";
 import type { ContainerInfoPayload } from "interfaces";
-import { devError, devLog } from "utils";
+import { devError, devLog, extractErrorMessage } from "utils";
 
 export type ContainerInfoResult = ContainerInfoPayload;
 
@@ -21,7 +21,7 @@ export function useContainerInfo() {
 			setResult(e.payload as ContainerInfoResult);
 		});
 		const unErr = listen<string>("info-error", e => {
-			devError("[tvault] info error", e.payload);
+			devError("[tvault] info error", extractErrorMessage(e.payload));
 			setError(e.payload);
 		});
 		return () => {
@@ -40,7 +40,10 @@ export function useContainerInfo() {
 			await invoke("run_container_info", { args: { path } });
 			devLog("[tvault] run_container_info invoke returned OK");
 		} catch (err) {
-			devError("[tvault] run_container_info failed", err);
+			devError(
+				"[tvault] run_container_info failed",
+				extractErrorMessage(err),
+			);
 			setError(err);
 			throw err;
 		}

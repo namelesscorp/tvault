@@ -1,3 +1,4 @@
+import arrow_down from "./arrow_down.svg";
 import arrow_right from "./arrow_right.svg";
 import back from "./back.svg";
 import check from "./check.svg";
@@ -11,6 +12,8 @@ import grid from "./grid.svg";
 import help_circle from "./help_circle.svg";
 import lock from "./lock.svg";
 import minus from "./minus.svg";
+import pencil from "./pencil.svg";
+import save from "./save.svg";
 import settings from "./settings.svg";
 import unlock from "./unlock.svg";
 
@@ -28,8 +31,11 @@ const icons = {
 	eye,
 	eye_off,
 	copy,
+	arrow_down,
 	arrow_right,
 	check,
+	pencil,
+	save,
 };
 
 export { icons };

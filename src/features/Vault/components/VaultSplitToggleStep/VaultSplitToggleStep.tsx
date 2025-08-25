@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { RouteTypes } from "interfaces";
@@ -10,6 +11,7 @@ import { vaultSetWizardState } from "../../state/Vault.actions";
 import { selectVaultWizardState } from "../../state/Vault.selectors";
 
 const VaultSplitToggleStep = () => {
+	const { formatMessage } = useIntl();
 	const wizard = useSelector(selectVaultWizardState);
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
@@ -40,28 +42,39 @@ const VaultSplitToggleStep = () => {
 
 	return (
 		<div>
-			<UISectionHeading icon={icons.lock} text={"Create"} />
+			<UISectionHeading
+				icon={icons.lock}
+				text={formatMessage({ id: "title.create" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 4 / 6 — Token
+				{formatMessage({ id: "vault.splitToggle.step" })}
 			</p>
 			<div
 				className={`grid ${wizard.integrityProvider === "none" ? "grid-cols-[260px_260px_260px]" : "grid-cols-[260px_260px]"} justify-center p-[20px] bg-white/5 rounded-[10px] mt-[20px] gap-[40px]`}>
 				<UIRadioCard
-					title="Master"
-					subtitle="One master token will be generated for open container."
+					title={formatMessage({ id: "vault.splitToggle.master" })}
+					subtitle={formatMessage({
+						id: "vault.splitToggle.masterDescription",
+					})}
 					selected={tokenType === "master"}
 					onClick={() => setTokenType("master")}
 				/>
 				<UIRadioCard
-					title="Share"
-					subtitle="A set of tokens will be generated using the Shamir method according to the specified parameters for open container."
+					title={formatMessage({ id: "vault.splitToggle.share" })}
+					subtitle={formatMessage({
+						id: "vault.splitToggle.shareDescription",
+					})}
 					selected={tokenType === "share"}
 					onClick={() => setTokenType("share")}
 				/>
 				{wizard.integrityProvider === "none" && (
 					<UIRadioCard
-						title="Disable"
-						subtitle="To open the container, not a token will be used, but a regular password that was generated or entered at the initial stage."
+						title={formatMessage({
+							id: "vault.splitToggle.disable",
+						})}
+						subtitle={formatMessage({
+							id: "vault.splitToggle.disableDescription",
+						})}
 						selected={tokenType === "none"}
 						onClick={() => setTokenType("none")}
 					/>
@@ -70,13 +83,13 @@ const VaultSplitToggleStep = () => {
 			<div className="flex items-center gap-[10px] mt-[20px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={() => navigate(-1)}
 					style={{ width: "fit-content" }}
 				/>
 				<UIButton
 					icon={icons.arrow_right}
-					text="Next"
+					text={formatMessage({ id: "common.next" })}
 					onClick={next}
 					style={{ width: "fit-content" }}
 				/>

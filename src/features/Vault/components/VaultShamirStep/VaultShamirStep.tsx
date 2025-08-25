@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { RouteTypes } from "interfaces";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UIInput, UISectionHeading } from "features/UI";
@@ -9,6 +11,7 @@ import { vaultSetOpenWizardState } from "../../state/Vault.actions";
 import { selectVaultOpenWizardState } from "../../state/Vault.selectors";
 
 const VaultShamirStep = () => {
+	const { formatMessage } = useIntl();
 	const wizard = useSelector(selectVaultOpenWizardState);
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
@@ -16,7 +19,6 @@ const VaultShamirStep = () => {
 	const [shares, setShares] = useState<string[]>(
 		wizard.shares && wizard.shares.length ? wizard.shares : [""],
 	);
-	const [err, setErr] = useState<string | null>(null);
 
 	useEffect(() => {
 		if (shares.length === 0 || shares[shares.length - 1] !== "") {
@@ -39,7 +41,7 @@ const VaultShamirStep = () => {
 
 	const next = useCallback(() => {
 		if (!hasEnoughShares) {
-			setErr("Minimum 2 shares");
+			toast.error(formatMessage({ id: "vault.shamirStep.error" }));
 			return;
 		}
 		dispatch(
@@ -53,42 +55,53 @@ const VaultShamirStep = () => {
 		} else {
 			navigate(RouteTypes.VaultOpenIntegrity);
 		}
-	}, [dispatch, wizard, readyShares, hasEnoughShares, navigate]);
+	}, [
+		dispatch,
+		wizard,
+		readyShares,
+		hasEnoughShares,
+		navigate,
+		formatMessage,
+	]);
 
 	return (
 		<div>
-			<UISectionHeading icon={icons.unlock} text={"Open"} />
+			<UISectionHeading
+				icon={icons.unlock}
+				text={formatMessage({ id: "title.open" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 2 / 6 — Shamir Shares
+				{formatMessage({ id: "vault.shamirStep.step" })}
 			</p>
 			<div className="flex flex-col gap-[20px] p-[20px] bg-white/5 rounded-[10px] mt-[20px]">
 				<div className="flex flex-col gap-[10px]">
 					<p className="text-[20px] text-white text-medium">
-						Enter Shamir shares:
+						{formatMessage({ id: "vault.shamirStep.shares" })}
 					</p>
 					{shares.map((s, idx) => (
 						<UIInput
 							key={idx}
-							placeholder={`Шер #${idx + 1}`}
+							placeholder={formatMessage(
+								{ id: "vault.shamirStep.sharePlaceholder" },
+								{ index: idx + 1 },
+							)}
 							value={s}
 							onChange={e => update(idx, e.target.value)}
 							style={{ maxWidth: "100%" }}
 						/>
 					))}
 				</div>
-
-				{err && <p className="text-[14px] text-red-400">{err}</p>}
 			</div>
 			<div className="flex items-center gap-[10px] mt-[20px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={() => navigate(-1)}
 					style={{ width: "fit-content" }}
 				/>
 				<UIButton
 					icon={icons.arrow_right}
-					text="Next"
+					text={formatMessage({ id: "common.next" })}
 					onClick={next}
 					style={{ width: "fit-content" }}
 				/>

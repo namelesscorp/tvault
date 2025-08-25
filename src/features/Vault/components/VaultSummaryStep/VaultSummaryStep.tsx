@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Fragment } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { RouteTypes } from "interfaces";
@@ -9,10 +10,11 @@ import { selectVaultWizardState } from "../../state/Vault.selectors";
 
 const CONTAINER_VERSION = 1;
 
-const humanCompression = { zip: "ZIP", none: "Нет" } as const;
-const humanIntegrity = { none: "Нет", hmac: "HMAC-SHA256" } as const;
+const humanCompression = { zip: "ZIP", none: "none" } as const;
+const humanIntegrity = { none: "none", hmac: "HMAC-SHA256" } as const;
 
 const VaultSummaryStep = () => {
+	const { formatMessage } = useIntl();
 	const wizard = useSelector(selectVaultWizardState);
 	const navigate = useNavigate();
 	const [showIntegrityPassword, setShowIntegrityPassword] = useState(false);
@@ -34,40 +36,76 @@ const VaultSummaryStep = () => {
 
 	return (
 		<div>
-			<UISectionHeading icon={icons.lock} text={"Create"} />
+			<UISectionHeading
+				icon={icons.lock}
+				text={formatMessage({ id: "title.create" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 6 / 6 — Final Сonfiguration
+				{formatMessage({ id: "vault.summary.step" })}
 			</p>
 			<div className="mt-[16px] grid grid-cols-[auto_1fr] gap-x-[30px] gap-y-[12px] p-[15px] bg-white/5 rounded-[10px] text-[15px] text-white">
-				<p className="opacity-50">Version:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.version" })}:
+				</p>
 				<p>{CONTAINER_VERSION}</p>
-				<p className="opacity-50">Comment:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.comment" })}:
+				</p>
 				<p>{wizard.comment || "—"}</p>
-				<p className="opacity-50">Tags:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.tags" })}:
+				</p>
 				<p>{wizard.tags || "—"}</p>
-				<p className="opacity-50">Compression:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.compression" })}:
+				</p>
 				<p>{humanCompression[wizard.compression]}</p>
-				<p className="opacity-50">Token:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.token" })}:
+				</p>
 				<p>{wizard.tokenType === "none" ? "—" : wizard.tokenType}</p>
-				<p className="opacity-50">Integrity:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.integrity" })}:
+				</p>
 				<p>{humanIntegrity[wizard.integrityProvider]}</p>
-				<p className="opacity-50">Shares:</p>
-				<p>{wizard.split ? wizard.n : "—"}</p>
-				<p className="opacity-50">Threshold:</p>
-				<p>{wizard.split ? wizard.k : "—"}</p>
-				<p className="opacity-50">Name:</p>
+				{wizard.tokenType === "share" && (
+					<Fragment>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.shares" })}:
+						</p>
+						<p>{wizard.n}</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.threshold" })}:
+						</p>
+						<p>{wizard.k}</p>
+					</Fragment>
+				)}
+				<p className="opacity-50">
+					{formatMessage({ id: "container.name" })}:
+				</p>
 				<p>{wizard.name || "—"}</p>
-				<p className="opacity-50">Container path:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.containerPath" })}:
+				</p>
 				<p className="break-all">{wizard.outputPath || "—"}</p>
-				<p className="opacity-50">Folder path:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.folderPath" })}:
+				</p>
 				<p className="break-all">{wizard.inputPath || "—"}</p>
 				{showSharePath && (
 					<Fragment>
-						<p className="opacity-50">Save path:</p>
+						<p className="opacity-50">
+							{formatMessage({
+								id: `container.savePath.${wizard.tokenType}`,
+							})}
+							:
+						</p>
 						<p className="break-all">{wizard.sharePath || "—"}</p>
 					</Fragment>
 				)}
-				<p className="opacity-50">Integrity password:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.integrityPassword" })}:
+				</p>
 				<div className="flex items-center gap-2">
 					<p>{getPasswordDisplay(wizard.additionalPassword)}</p>
 					{wizard.additionalPassword && (
@@ -88,13 +126,13 @@ const VaultSummaryStep = () => {
 			<div className="flex items-center gap-[10px] mt-[20px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={() => navigate(-1)}
 					style={{ width: "fit-content" }}
 				/>
 				<UIButton
 					icon={icons.arrow_right}
-					text="Create"
+					text={formatMessage({ id: "common.create" })}
 					onClick={onFinish}
 					style={{ width: "fit-content" }}
 				/>

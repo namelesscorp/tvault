@@ -1,6 +1,7 @@
 import { openPath } from "@tauri-apps/plugin-opener";
 import { Store } from "@tauri-apps/plugin-store";
 import { useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -22,6 +23,7 @@ let ENCRYPT_RUN_GUARD = false;
 let RECENT_ADDED_GUARD = false;
 
 const VaultEncryptRunStep = () => {
+	const { formatMessage } = useIntl();
 	const wizard = useSelector(selectVaultWizardState);
 	const navigate = useNavigate();
 	const dispatch = useAppDispatch();
@@ -131,7 +133,7 @@ const VaultEncryptRunStep = () => {
 	const copy = async (val: string) => {
 		try {
 			await navigator.clipboard.writeText(val);
-			toast.success("Copied to clipboard");
+			toast.success(formatMessage({ id: "common.copied" }));
 		} catch (e) {
 			devError(e);
 		}
@@ -143,31 +145,36 @@ const VaultEncryptRunStep = () => {
 			await openPath(savedSharePath);
 		} catch (e) {
 			devError(e);
-			toast.error("Failed to open folder");
+			toast.error(formatMessage({ id: "common.openFolderError" }));
 		}
 	};
 
 	if (error) {
 		return (
 			<div>
-				<UISectionHeading icon={icons.lock} text={"Create"} />
+				<UISectionHeading
+					icon={icons.lock}
+					text={formatMessage({ id: "title.create" })}
+				/>
 				<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-					Creating container
+					{formatMessage({ id: "vault.encryptRun.step.creating" })}
 				</p>
 				<div className="mt-[16px] grid grid-cols-[auto_1fr] gap-x-[30px] gap-y-[12px] p-[15px] bg-white/5 rounded-[10px] text-[15px] text-white">
-					<p className="opacity-50">Error:</p>
+					<p className="opacity-50">
+						{formatMessage({ id: "common.error" })}:
+					</p>
 					<p>{String((error as Error)?.message ?? error)}</p>
 				</div>
 				<div className="flex items-center gap-[10px] mt-[20px]">
 					<UIButton
 						icon={icons.back}
-						text="Back"
+						text={formatMessage({ id: "common.back" })}
 						onClick={() => navigate(-1)}
 						style={{ width: "fit-content" }}
 					/>
 					<UIButton
 						icon={icons.close}
-						text="Close"
+						text={formatMessage({ id: "common.close" })}
 						onClick={() => {
 							dispatch(vaultResetWizardState());
 							navigate(RouteTypes.Dashboard);
@@ -182,9 +189,12 @@ const VaultEncryptRunStep = () => {
 	if (!done) {
 		return (
 			<div>
-				<UISectionHeading icon={icons.lock} text={"Create"} />
+				<UISectionHeading
+					icon={icons.lock}
+					text={formatMessage({ id: "title.create" })}
+				/>
 				<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-					Creating container
+					{formatMessage({ id: "vault.encryptRun.step.creating" })}
 				</p>
 				<div className="flex flex-col items-center gap-[20px] mt-[20px]">
 					<div className="w-[320px]">
@@ -197,7 +207,7 @@ const VaultEncryptRunStep = () => {
 						</div>
 					</div>
 					<p className="text-[16px] text-white/50 text-medium">
-						Progress: {progress}%
+						{formatMessage({ id: "common.progress" })} {progress}%
 					</p>
 				</div>
 			</div>
@@ -210,15 +220,25 @@ const VaultEncryptRunStep = () => {
 
 	return (
 		<div>
-			<UISectionHeading icon={icons.lock} text={"Create"} />
+			<UISectionHeading
+				icon={icons.lock}
+				text={formatMessage({ id: "title.create" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Save Share Tokens
+				{formatMessage({
+					id: `vault.encryptRun.step.save.${savedTokenType}`,
+				})}
 			</p>
 			{savedShareDest === "file" && (
 				<div className="flex flex-col gap-[20px]">
 					<div className="grid grid-cols-2 gap-[20px] mt-[20px]">
 						<div className="grid grid-cols-[auto_1fr] p-[15px] gap-[10px] bg-white/5 rounded-[10px] text-white">
-							<p className="opacity-50">Save path:</p>
+							<p className="opacity-50">
+								{formatMessage({
+									id: `container.savePath.${savedTokenType}`,
+								})}
+								:
+							</p>
 							<p className="text-[16px] text-medium text-white text-center overflow-hidden text-ellipsis whitespace-nowrap">
 								{savedSharePath}
 							</p>
@@ -254,7 +274,10 @@ const VaultEncryptRunStep = () => {
 					{savedAdditionalPassword && (
 						<div className="grid grid-cols-[1fr_auto] items-center gap-[10px] h-[50px] px-[15px] bg-[#3361D8]/10 border-[#2E68C4]/50 rounded-[10px] max-w-full">
 							<p className="text-[16px] text-medium overflow-hidden text-ellipsis whitespace-nowrap text-white">
-								Integrity Password: {savedAdditionalPassword}
+								{formatMessage({
+									id: "container.integrityPassword",
+								})}{" "}
+								{savedAdditionalPassword}
 							</p>
 							<button
 								type="button"
@@ -271,7 +294,7 @@ const VaultEncryptRunStep = () => {
 			)}
 			{savedShareDest === "stdout" && (
 				<div className="flex flex-col gap-[20px]">
-					<div className="flex flex-col items-center gap-[20px] mt-[20px] text-white">
+					<div className="flex flex-col gap-[20px] mt-[20px] text-white">
 						{res?.masterToken && (
 							<>
 								<div className="grid grid-cols-[1fr_auto] items-center gap-[10px] h-[50px] px-[15px] bg-[#3361D8]/10 border-[#2E68C4]/50 rounded-[10px] max-w-full">
@@ -362,7 +385,7 @@ const VaultEncryptRunStep = () => {
 					<div className="flex items-center gap-[10px]">
 						<UIButton
 							icon={icons.copy}
-							text="Copy all"
+							text={formatMessage({ id: "common.copyAll" })}
 							onClick={() => {
 								const allTokens = [];
 								if (res?.masterToken) {
@@ -390,7 +413,7 @@ const VaultEncryptRunStep = () => {
 						/>
 						<UIButton
 							icon={icons.check}
-							text="Done"
+							text={formatMessage({ id: "common.done" })}
 							onClick={() => {
 								dispatch(vaultResetWizardState());
 								navigate(RouteTypes.Dashboard);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { RouteTypes } from "interfaces";
@@ -11,6 +12,7 @@ import { selectVaultWizardState } from "../../state/Vault.selectors";
 export type IntegrityProvider = "none" | "hmac";
 
 const VaultIntegrityStep = () => {
+	const { formatMessage } = useIntl();
 	const wizard = useSelector(selectVaultWizardState);
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
@@ -32,20 +34,27 @@ const VaultIntegrityStep = () => {
 
 	return (
 		<div>
-			<UISectionHeading icon={icons.lock} text={"Create"} />
+			<UISectionHeading
+				icon={icons.lock}
+				text={formatMessage({ id: "title.create" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 3 / 6 — Integrity Provider
+				{formatMessage({ id: "vault.integrity.step" })}
 			</p>
 			<div className="grid grid-cols-[260px_260px] justify-center p-[20px] bg-white/5 rounded-[10px] mt-[20px] gap-[40px]">
 				<UIRadioCard
-					title="None"
-					subtitle="Container will be saved without HMAC."
+					title={formatMessage({ id: "vault.integrity.none" })}
+					subtitle={formatMessage({
+						id: "vault.integrity.noneDescription",
+					})}
 					selected={provider === "none"}
 					onClick={() => setProvider("none")}
 				/>
 				<UIRadioCard
-					title="HMAC-SHA256"
-					subtitle="Adds HMAC for container integrity check. Requires additional password."
+					title={formatMessage({ id: "vault.integrity.hmac" })}
+					subtitle={formatMessage({
+						id: "vault.integrity.hmacDescription",
+					})}
 					selected={provider === "hmac"}
 					onClick={() => setProvider("hmac")}
 				/>
@@ -53,13 +62,13 @@ const VaultIntegrityStep = () => {
 			<div className="flex items-center gap-[10px] mt-[20px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={() => navigate(-1)}
 					style={{ width: "fit-content" }}
 				/>
 				<UIButton
 					icon={icons.arrow_right}
-					text="Next"
+					text={formatMessage({ id: "common.next" })}
 					onClick={next}
 					style={{ width: "fit-content" }}
 				/>

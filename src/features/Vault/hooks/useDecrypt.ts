@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
-import { devError, devLog } from "utils";
+import { devError, devLog, extractErrorMessage } from "utils";
 
 export interface DecryptArgs {
 	containerPath: string;
@@ -83,7 +83,7 @@ const useDecrypt = () => {
 			await invoke("run_decrypt", { args: payload });
 			devLog("[tvault] run_decrypt invoke returned OK");
 		} catch (err) {
-			devError("[tvault] run_decrypt failed", err);
+			devError("[tvault] run_decrypt failed", extractErrorMessage(err));
 			setError(err);
 			runningRef.current = false;
 			throw err;

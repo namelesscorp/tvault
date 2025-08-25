@@ -41,6 +41,7 @@ const initialState: VaultSlice = {
 	recent: [],
 	containerInfo: {},
 	resealData: [],
+	containersPath: "",
 };
 
 export const vaultSlice = createSlice({
@@ -156,7 +157,31 @@ export const vaultSlice = createSlice({
 		vaultClearResealData: state => {
 			state.resealData = [];
 		},
+		vaultSetContainersPath: (state, { payload }: PayloadAction<string>) => {
+			state.containersPath = payload;
+		},
 	},
 });
+
+export const {
+	vaultSetContainers,
+	vaultAddContainer,
+	vaultRemoveContainer,
+	vaultSetRecent,
+	vaultAddRecent,
+	vaultAddRecentWithMountPath,
+	vaultUpdateRecentMountPath,
+	vaultSetContainerInfo,
+	vaultSetContainerInfoMap,
+	vaultRemoveRecent,
+	vaultSetWizardState,
+	vaultResetWizardState,
+	vaultSetOpenWizardState,
+	vaultResetOpenWizardState,
+	vaultAddResealData,
+	vaultRemoveResealData,
+	vaultClearResealData,
+	vaultSetContainersPath,
+} = vaultSlice.actions;
 
 export const vaultReducer = vaultSlice.reducer;

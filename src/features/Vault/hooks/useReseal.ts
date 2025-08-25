@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
-import { devError, devLog } from "utils";
+import { devError, devLog, extractErrorMessage } from "utils";
 
 export interface ResealArgs {
 	currentPath: string;
@@ -44,7 +44,7 @@ const useReseal = () => {
 			setResult(e.payload);
 		});
 		const un4 = listen<unknown>("reseal-error", e => {
-			devLog("[tvault] reseal error", e.payload);
+			devLog("[tvault] reseal error", extractErrorMessage(e.payload));
 			setError(e.payload);
 		});
 
@@ -148,7 +148,7 @@ const useReseal = () => {
 			await resealPromise;
 			devLog("[tvault] reseal operation completed successfully");
 		} catch (err) {
-			devError("[tvault] run_reseal failed", err);
+			devError("[tvault] run_reseal failed", extractErrorMessage(err));
 			setError(err);
 			runningRef.current = false;
 			throw err;

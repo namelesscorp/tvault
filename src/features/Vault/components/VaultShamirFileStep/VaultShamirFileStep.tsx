@@ -1,5 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -11,6 +12,7 @@ import { vaultSetOpenWizardState } from "../../state/Vault.actions";
 import { selectVaultOpenWizardState } from "../../state/Vault.selectors";
 
 const VaultShamirFileStep = () => {
+	const { formatMessage } = useIntl();
 	const wizard = useSelector(selectVaultOpenWizardState);
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
@@ -49,25 +51,30 @@ const VaultShamirFileStep = () => {
 
 	return (
 		<div>
-			<UISectionHeading icon={icons.unlock} text={"Open"} />
+			<UISectionHeading
+				icon={icons.unlock}
+				text={formatMessage({ id: "title.open" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 2 / 6 — Load Shamir Shares from File
+				{formatMessage({ id: "vault.shamirFileStep.step" })}
 			</p>
 			<div className="flex flex-col gap-[20px] p-[20px] bg-white/5 rounded-[10px] mt-[20px]">
 				<div className="flex flex-col gap-[10px]">
 					<p className="text-[20px] text-white text-medium">
-						Path to share tokens file:
+						{formatMessage({ id: "vault.shamirFileStep.shares" })}:
 					</p>
 					<div className="flex items-center gap-[10px]">
 						<UIInput
 							value={jsonFilePath || ""}
-							placeholder="Choose"
+							placeholder={formatMessage({
+								id: "common.pathPlaceholder",
+							})}
 							style={{ maxWidth: "50%" }}
 							readOnly
 						/>
 						<UIButton
 							icon={icons.folder}
-							text="Browse"
+							text={formatMessage({ id: "common.browse" })}
 							onClick={pickJson}
 							style={{ width: "fit-content" }}
 						/>
@@ -77,13 +84,13 @@ const VaultShamirFileStep = () => {
 			<div className="flex items-center gap-[10px] mt-[20px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={() => navigate(-1)}
 					style={{ width: "fit-content" }}
 				/>
 				<UIButton
 					icon={icons.arrow_right}
-					text="Next"
+					text={formatMessage({ id: "common.next" })}
 					onClick={next}
 					style={{ width: "fit-content" }}
 				/>

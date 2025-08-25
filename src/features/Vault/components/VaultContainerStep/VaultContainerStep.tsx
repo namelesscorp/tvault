@@ -1,6 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { Store } from "@tauri-apps/plugin-store";
 import { useCallback, useEffect, useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -8,12 +9,14 @@ import { RouteTypes } from "interfaces";
 import {
 	createAsyncOnceGuard,
 	devError,
+	getLocalizedErrorMessage,
 	getMountPathWithFallback,
 	useRequestGuard,
 } from "utils";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UICheckbox, UIInput, UISectionHeading } from "features/UI";
 import { icons } from "~/assets/collections/icons";
+import { useLocale } from "~/features/Localization";
 import { useContainerInfo } from "../../hooks/useContainerInfo";
 import {
 	vaultAddRecentWithMountPath,
@@ -56,6 +59,8 @@ const saveRecentData = createAsyncOnceGuard(
 );
 
 const VaultContainerStep = () => {
+	const { formatMessage } = useIntl();
+	const { locale } = useLocale();
 	const wizard = useSelector(selectVaultOpenWizardState);
 	const recent = useSelector(selectVaultRecent);
 	const dispatch = useAppDispatch();
@@ -69,12 +74,13 @@ const VaultContainerStep = () => {
 	);
 	const [busy, setBusy] = useState(false);
 	const [containerInfo, setContainerInfo] = useState<any>(null);
+	const [userHasInteracted, setUserHasInteracted] = useState(false);
 
 	const { fn: guardedRunContainerInfo, reset: resetContainerInfo } =
 		useRequestGuard(runContainerInfo);
 
 	useEffect(() => {
-		if (path) {
+		if (path && !userHasInteracted) {
 			const recentItem = recent.find(r => r.path === path);
 			const savedMountPath = recentItem?.lastMountPath;
 
@@ -98,7 +104,14 @@ const VaultContainerStep = () => {
 				}
 			}
 		}
-	}, [path, recent, wizard.customMountDir, autoMountDir, customMountDir]);
+	}, [
+		path,
+		recent,
+		wizard.customMountDir,
+		autoMountDir,
+		customMountDir,
+		userHasInteracted,
+	]);
 
 	useEffect(() => {
 		if (path && !containerInfo) {
@@ -110,18 +123,26 @@ const VaultContainerStep = () => {
 		if (done && result && !error) {
 			const containerData = result.data;
 			if (!containerData) {
-				toast.error("Failed to get container information");
+				toast.error(
+					formatMessage({
+						id: "vault.containerStep.containerInfo.error",
+					}),
+				);
 				return;
 			}
 			setContainerInfo(containerData);
 		} else if (error) {
 			toast.error(
-				`Error getting container information: ${JSON.stringify(error)}`,
+				`${formatMessage({ id: "vault.containerStep.containerInfo.error" })}: ${getLocalizedErrorMessage(error, formatMessage, locale)}`,
 			);
+			// Clear path field on error
+			setPath("");
+			setContainerInfo(null);
 		}
 	}, [done, result, error]);
 
 	const handleAutoMountDirChange = useCallback((checked: boolean) => {
+		setUserHasInteracted(true);
 		setAutoMountDir(checked);
 		if (checked) {
 			setCustomMountDir("");
@@ -135,28 +156,40 @@ const VaultContainerStep = () => {
 		setPath(file);
 		setContainerInfo(null);
 		resetContainerInfo();
+		setUserHasInteracted(false);
 	}, [resetContainerInfo]);
 
 	const pickMountDir = useCallback(async () => {
 		const dir = await open({ directory: true, multiple: false });
 		if (typeof dir !== "string") return;
+		setUserHasInteracted(true);
 		setCustomMountDir(dir);
 	}, []);
 
 	const next = useCallback(async () => {
 		if (!path.length) {
-			toast.error("Select container file");
+			toast.error(
+				formatMessage({
+					id: "vault.containerStep.selectContainer.error",
+				}),
+			);
 			return;
 		}
 
 		if (!autoMountDir && !customMountDir.trim()) {
-			toast.error("Select folder for extraction");
+			toast.error(
+				formatMessage({
+					id: "vault.containerStep.selectMountDir.error",
+				}),
+			);
 			return;
 		}
 
 		if (!containerInfo) {
 			toast.error(
-				"Container information is not loaded yet. Please wait a moment.",
+				formatMessage({
+					id: "vault.containerStep.containerInfo.error.description",
+				}),
 			);
 			return;
 		}
@@ -204,7 +237,9 @@ const VaultContainerStep = () => {
 				navigate(RouteTypes.VaultOpenShamirMethod);
 			}
 		} catch (e: unknown) {
-			toast.error(String(e));
+			toast.error(getLocalizedErrorMessage(e, formatMessage, locale));
+			setPath("");
+			setContainerInfo(null);
 		} finally {
 			setBusy(false);
 		}
@@ -220,25 +255,30 @@ const VaultContainerStep = () => {
 
 	return (
 		<div>
-			<UISectionHeading icon={icons.unlock} text={"Open"} />
+			<UISectionHeading
+				icon={icons.unlock}
+				text={formatMessage({ id: "title.open" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 1 / 6 — Paths
+				{formatMessage({ id: "vault.containerStep.step" })}
 			</p>
 			<div className="flex flex-col gap-[20px] p-[20px] bg-white/5 rounded-[10px] mt-[20px]">
 				<div className="flex flex-col gap-[10px]">
 					<p className="text-[20px] text-white text-medium">
-						Path to container:
+						{formatMessage({ id: "vault.containerStep.path" })}:
 					</p>
 					<div className="flex items-center gap-[10px]">
 						<UIInput
 							value={path}
-							placeholder="Choose"
+							placeholder={formatMessage({
+								id: "common.pathPlaceholder",
+							})}
 							style={{ maxWidth: "50%" }}
 							readOnly
 						/>
 						<UIButton
 							icon={icons.folder}
-							text="Browse"
+							text={formatMessage({ id: "common.browse" })}
 							onClick={pickFile}
 							style={{ width: "fit-content" }}
 						/>
@@ -248,25 +288,35 @@ const VaultContainerStep = () => {
 					<UICheckbox
 						checked={autoMountDir}
 						onChange={handleAutoMountDirChange}
-						label="Automatically select folder for open container"
+						label={formatMessage({
+							id: "vault.containerStep.autoMountDir",
+						})}
 					/>
 					{!autoMountDir && (
 						<div className="flex flex-col gap-[10px]">
 							<p className="text-[20px] text-white text-medium">
-								Path for open container:
+								{formatMessage({
+									id: "vault.containerStep.pathOpen",
+								})}
+								:
 							</p>
 							<div className="flex items-center gap-[10px]">
 								<UIInput
 									value={customMountDir}
-									placeholder="Choose"
+									placeholder={formatMessage({
+										id: "common.pathPlaceholder",
+									})}
 									style={{ maxWidth: "50%" }}
-									onChange={e =>
-										setCustomMountDir(e.target.value)
-									}
+									onChange={e => {
+										setUserHasInteracted(true);
+										setCustomMountDir(e.target.value);
+									}}
 								/>
 								<UIButton
 									icon={icons.folder}
-									text="Browse"
+									text={formatMessage({
+										id: "common.browse",
+									})}
 									onClick={pickMountDir}
 									style={{ width: "fit-content" }}
 								/>
@@ -278,13 +328,13 @@ const VaultContainerStep = () => {
 			<div className="flex items-center gap-[10px] mt-[20px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={() => navigate(-1)}
 					style={{ width: "fit-content" }}
 				/>
 				<UIButton
 					icon={icons.arrow_right}
-					text="Next"
+					text={formatMessage({ id: "common.next" })}
 					onClick={next}
 					disabled={
 						!path.length ||

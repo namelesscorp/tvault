@@ -1,4 +1,5 @@
 import { Fragment, useMemo } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -27,6 +28,7 @@ function decodeId(id: string): string | null {
 }
 
 const ContainerDetails = () => {
+	const { formatMessage } = useIntl();
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
 	const containers = useSelector(selectVaultContainers);
@@ -46,7 +48,7 @@ const ContainerDetails = () => {
 
 	const mountDir = containerPath ? containers[containerPath] : undefined;
 	const isOpened = !!mountDir;
-	const { run, result, error } = useContainerInfo();
+	const { run, result } = useContainerInfo();
 
 	const {
 		isEditing,
@@ -104,7 +106,9 @@ const ContainerDetails = () => {
 		<section className="flex flex-col gap-[20px]">
 			<div className="flex items-center gap-[20px]">
 				<UIImgIcon icon={icons.folder} width={30} height={30} />
-				<p className="text-[20px] text-white text-medium">Container</p>
+				<p className="text-[20px] text-white text-medium">
+					{formatMessage({ id: "container.container" })}
+				</p>
 			</div>
 			<UIContainerRow
 				text={containerName}
@@ -116,19 +120,36 @@ const ContainerDetails = () => {
 			{!!result?.data && (
 				<div className="p-[15px] bg-white/5 rounded-[10px] max-h-[500px] overflow-y-auto">
 					<div className="grid grid-cols-2 gap-y-[10px] text-[15px] text-white">
-						<p className="opacity-50">Path:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.path" })}:
+						</p>
 						<p>{containerPath}</p>
 						{isOpened && (
 							<Fragment>
-								<p className="opacity-50">Mount dir:</p>
+								<p className="opacity-50">
+									{formatMessage({
+										id: "container.mountPath",
+									})}
+									:
+								</p>
 								<p className="break-all">{mountDir}</p>
 							</Fragment>
 						)}
-						<p className="opacity-50">State:</p>
-						<p>{isOpened ? "opened" : "closed"}</p>
-						<p className="opacity-50">Version:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.state" })}:
+						</p>
+						<p>
+							{isOpened
+								? formatMessage({ id: "container.opened" })
+								: formatMessage({ id: "container.closed" })}
+						</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.version" })}:
+						</p>
 						<p>{result.data?.version ?? "—"}</p>
-						<p className="opacity-50">Name:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.name" })}:
+						</p>
 						<UIEditableField
 							value={
 								isEditing
@@ -141,7 +162,9 @@ const ContainerDetails = () => {
 							isEditing={isEditing}
 							placeholder="Enter name"
 						/>
-						<p className="opacity-50">Comment:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.comment" })}:
+						</p>
 						<UIEditableField
 							value={
 								isEditing
@@ -156,11 +179,17 @@ const ContainerDetails = () => {
 							isEditing={isEditing}
 							placeholder="Enter comment"
 						/>
-						<p className="opacity-50">Created:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.created" })}:
+						</p>
 						<p>{formatLocalDateTime(result.data?.created_at)}</p>
-						<p className="opacity-50">Last reseal:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.lastReseal" })}:
+						</p>
 						<p>{formatLocalDateTime(result.data?.updated_at)}</p>
-						<p className="opacity-50">Last seen:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.lastSeen" })}:
+						</p>
 						<p>
 							{formatLocalDateTime(
 								new Date(
@@ -168,7 +197,9 @@ const ContainerDetails = () => {
 								).toISOString(),
 							)}
 						</p>
-						<p className="opacity-50">Tags:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.tags" })}:
+						</p>
 						<UIEditableField
 							value={
 								isEditing
@@ -191,34 +222,47 @@ const ContainerDetails = () => {
 							onSave={saveEdit}
 							onCancel={cancelEdit}
 							isEditing={isEditing}
-							placeholder="Enter tags (comma separated)"
+							placeholder={formatMessage({
+								id: "container.tagsPlaceholder",
+							})}
 						/>
-						<p className="opacity-50">Token:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.token" })}:
+						</p>
 						<p>{result.data?.token_type ?? "—"}</p>
-						<p className="opacity-50">Integrity:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.integrity" })}:
+						</p>
 						<p>{result.data?.integrity_provider_type ?? "—"}</p>
 						{result.data?.integrity_provider_type === "hmac" && (
 							<Fragment>
 								<p className="opacity-50">
-									Integrity Password:
+									{formatMessage({
+										id: "container.integrityPassword",
+									})}
 								</p>
 								<p>••••••••</p>
 							</Fragment>
 						)}
-						<p className="opacity-50">Compression:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.compression" })}:
+						</p>
 						<p>{result.data?.compression_type ?? "—"}</p>
-						<p className="opacity-50">Shares:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.shares" })}:
+						</p>
 						<p>{result.data?.shares ?? "—"}</p>
-						<p className="opacity-50">Threshold:</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.threshold" })}:
+						</p>
 						<p>{result.data?.threshold ?? "—"}</p>
 					</div>
 				</div>
 			)}
-			{!!error && toast.error("Failed to get container information")}
 			<div className="flex justify-start gap-[10px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={handleBack}
 					style={{ width: "fit-content" }}
 				/>
@@ -226,28 +270,28 @@ const ContainerDetails = () => {
 					<Fragment>
 						<UIButton
 							icon={icons.folder}
-							text="Open folder"
+							text={formatMessage({ id: "container.openFolder" })}
 							onClick={() => handleOpenFolder(mountDir)}
 							style={{ width: "fit-content" }}
 						/>
 						{isEditing ? (
 							<UIButton
 								icon={icons.check}
-								text="Save"
+								text={formatMessage({ id: "common.save" })}
 								onClick={saveEdit}
 								style={{ width: "fit-content" }}
 							/>
 						) : (
 							<UIButton
-								icon={icons.settings}
-								text="Edit"
+								icon={icons.pencil}
+								text={formatMessage({ id: "common.edit" })}
 								onClick={startEdit}
 								style={{ width: "fit-content" }}
 							/>
 						)}
 						<UIButton
 							icon={icons.lock}
-							text="Close"
+							text={formatMessage({ id: "common.close" })}
 							onClick={handleReseal}
 							style={{ width: "fit-content" }}
 						/>
@@ -255,7 +299,7 @@ const ContainerDetails = () => {
 				) : (
 					<UIButton
 						icon={icons.lock}
-						text="Open"
+						text={formatMessage({ id: "common.open" })}
 						onClick={() => handleOpenClosedContainer(containerPath)}
 						style={{ width: "fit-content" }}
 					/>

@@ -14,4 +14,5 @@ export interface VaultSlice {
 	recent: { path: string; lastOpenedAt: number; lastMountPath?: string }[];
 	containerInfo: Record<string, ContainerInfoData>;
 	resealData: ResealData[];
+	containersPath: string;
 }

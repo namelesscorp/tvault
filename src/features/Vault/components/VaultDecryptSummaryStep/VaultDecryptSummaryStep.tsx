@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { RouteTypes } from "interfaces";
@@ -10,6 +11,7 @@ import { useContainerInfo } from "../../hooks/useContainerInfo";
 const humanIntegrity = { none: "None", hmac: "HMAC-SHA256" } as const;
 
 const VaultDecryptSummaryStep = () => {
+	const { formatMessage } = useIntl();
 	const wizard = useSelector(selectVaultOpenWizardState);
 	const navigate = useNavigate();
 	const [showIntegrityPassword, setShowIntegrityPassword] = useState(false);
@@ -41,37 +43,39 @@ const VaultDecryptSummaryStep = () => {
 		return showIntegrityPassword ? password : "•".repeat(20);
 	};
 
-	const getAuthMethodDisplay = () => {
-		if (wizard.tokenType === "master") {
-			return "Master token only";
-		} else if (wizard.tokenType === "none") {
-			return "Password only";
-		} else if (wizard.tokenType === "share") {
-			return "Shamir shares";
-		}
-		return "—";
-	};
-
 	return (
 		<div>
-			<UISectionHeading icon={icons.unlock} text={"Open"} />
+			<UISectionHeading
+				icon={icons.unlock}
+				text={formatMessage({ id: "title.open" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 4 / 5 — Final Configuration
+				{formatMessage({ id: "vault.decryptSummary.step" })}
 			</p>
 			<div className="mt-[16px] grid grid-cols-[auto_1fr] gap-x-[30px] gap-y-[12px] p-[15px] bg-white/5 rounded-[10px] text-[15px] text-white">
-				<p className="opacity-50">Version:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.version" })}:
+				</p>
 				<p>{containerInfo?.version || "—"}</p>
-				<p className="opacity-50">Token:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.token" })}:
+				</p>
 				<p>{wizard.tokenType || "—"}</p>
-				<p className="opacity-50">Auth method:</p>
-				<p>{getAuthMethodDisplay()}</p>
-				<p className="opacity-50">Integrity:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.integrity" })}:
+				</p>
 				<p>{humanIntegrity[wizard.integrityProvider] || "—"}</p>
-				<p className="opacity-50">Container path:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.containerPath" })}:
+				</p>
 				<p className="break-all">{wizard.containerPath || "—"}</p>
-				<p className="opacity-50">Folder path:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.folderPath" })}:
+				</p>
 				<p className="break-all">{wizard.mountDir || "—"}</p>
-				<p className="opacity-50">Integrity password:</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.integrityPassword" })}:
+				</p>
 				<div className="flex items-center gap-2">
 					<p>{getPasswordDisplay(wizard.additionalPassword)}</p>
 					{wizard.additionalPassword && (
@@ -92,13 +96,13 @@ const VaultDecryptSummaryStep = () => {
 			<div className="flex items-center gap-[10px] mt-[20px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={() => navigate(-1)}
 					style={{ width: "fit-content" }}
 				/>
 				<UIButton
 					icon={icons.unlock}
-					text="Open"
+					text={formatMessage({ id: "common.open" })}
 					onClick={onNext}
 					style={{ width: "fit-content" }}
 				/>

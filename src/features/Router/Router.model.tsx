@@ -1,6 +1,8 @@
 import { Navigate, NonIndexRouteObject } from "react-router-dom";
 import { RouteTypes } from "interfaces";
+import { Dashboard } from "features/Dashboard";
 import { Layout } from "features/Layout";
+import { Settings } from "features/Settings";
 import {
 	ContainerDetails,
 	VaultBasicStep,
@@ -25,7 +27,6 @@ import {
 	VaultSplitToggleStep,
 	VaultSummaryStep,
 } from "features/Vault";
-import { Dashboard } from "../Dashboard";
 
 export const routes: NonIndexRouteObject[] = [
 	{
@@ -127,6 +128,10 @@ export const routes: NonIndexRouteObject[] = [
 			{
 				path: RouteTypes.ContainerDetails,
 				element: <ContainerDetails />,
+			},
+			{
+				path: RouteTypes.Settings,
+				element: <Settings />,
 			},
 			{
 				path: "*",

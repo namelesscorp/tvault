@@ -8,6 +8,38 @@ mod cli_runner;
 
 use cli_runner::{run_encrypt, run_decrypt, run_container_info, run_reseal, container_info_once}; 
 
+/* ---------- scan directory for containers ---------- */
+#[tauri::command]
+fn scan_containers_directory(path: String) -> Result<Vec<String>, String> {
+    use std::fs;
+    use std::path::Path;
+    
+    let dir = Path::new(&path);
+    if !dir.exists() || !dir.is_dir() {
+        return Ok(vec![]);
+    }
+    
+    let mut containers = Vec::new();
+    
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            if let Ok(metadata) = entry.metadata() {
+                if metadata.is_file() {
+                    if let Some(extension) = entry.path().extension() {
+                        if extension == "tvlt" {
+                            if let Some(path_str) = entry.path().to_str() {
+                                containers.push(path_str.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(containers)
+}
+
 /* ---------- global counter ---------- */
 static ENTROPY_BITS: Lazy<AtomicU32> = Lazy::new(|| AtomicU32::new(0));
 const TARGET_BITS: u32 = 512;
@@ -33,12 +65,19 @@ fn check_container_path(path: String) -> Result<(), String> {
     use std::path::Path;
     let p = Path::new(&path);
     if p.exists() {
-        return Err("Файл уже существует".into());
+        return Err("vault.basic.error.outputPathExists".into());
     }
     if let Some(parent) = p.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+#[tauri::command]
+fn check_file_exists(path: String) -> Result<bool, String> {
+    use std::path::Path;
+    let p = Path::new(&path);
+    Ok(p.exists() && p.is_file())
 }
 
 #[tauri::command]
@@ -75,7 +114,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             entropy_batch,
             check_container_path,
+            check_file_exists,
             remove_dir,
+            scan_containers_directory,
             run_encrypt,
             run_decrypt,
             run_container_info,

@@ -20,10 +20,16 @@ html,
 body {
 	width: 100%;
 	height: 100%;
-	background-color: #101318;
+	background-color: transparent;
+	overflow: hidden;
+}
+
+body {
+	border-radius: 10px;
 	overflow: hidden;
 }
 
 #root {
 	height: 100%;
+	background-color: transparent;
 }

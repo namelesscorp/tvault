@@ -1,9 +1,11 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
+import { DEFAULT_LOCALE } from "features/Localization/Localization.model";
 import { APP_STORE_KEY, AppSlice } from "./App.slice";
 
 const initialState: AppSlice = {
 	inited: false,
 	loaded: false,
+	locale: DEFAULT_LOCALE,
 };
 
 export const appSlice = createSlice({
@@ -15,6 +17,12 @@ export const appSlice = createSlice({
 		},
 		appSetLoaded: (state, { payload }: PayloadAction<boolean>) => {
 			state.loaded = payload;
+		},
+		appSetLocale: (
+			state,
+			{ payload }: PayloadAction<AppSlice["locale"]>,
+		) => {
+			state.locale = payload;
 		},
 	},
 });

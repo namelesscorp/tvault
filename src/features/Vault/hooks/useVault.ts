@@ -3,6 +3,7 @@ import { tempDir } from "@tauri-apps/api/path";
 import { BaseDirectory, remove } from "@tauri-apps/plugin-fs";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { useCallback } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -31,6 +32,7 @@ export const useVault = (
 	const recent = useSelector(selectVaultRecent);
 	const { run: runReseal } = useReseal();
 	const { run: runContainerInfo } = useContainerInfo();
+	const { formatMessage } = useIntl();
 
 	const handleOpenFolder = useCallback(async (mountDir: string) => {
 		try {
@@ -179,7 +181,9 @@ export const useVault = (
 						await runReseal(resealArgs);
 
 						devLog("[tvault] Reseal completed successfully");
-						toast.success("Контейнер успешно перепакован");
+						toast.success(
+							formatMessage({ id: "container.reseal.success" }),
+						);
 
 						try {
 							await runContainerInfo(containerPath);
@@ -209,7 +213,7 @@ export const useVault = (
 					} catch (resealErr) {
 						devError("Failed to reseal container", resealErr);
 						toast.error(
-							"Ошибка при перепаковке контейнера. Контейнер остается открытым.",
+							formatMessage({ id: "container.reseal.error" }),
 						);
 						return;
 					}
@@ -246,7 +250,7 @@ export const useVault = (
 				onContainerClose?.(containerPath);
 			} catch (err) {
 				devError("Failed to close container", err);
-				toast.error("Ошибка при закрытии контейнера");
+				toast.error(formatMessage({ id: "container.close.error" }));
 			}
 		},
 		[dispatch, onContainerClose, runReseal, infoMap],

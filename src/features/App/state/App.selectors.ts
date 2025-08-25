@@ -13,3 +13,8 @@ export const selectAppLoaded = createSelector(
 	selectAppSlice,
 	slice => slice.loaded,
 );
+
+export const selectAppLocale = createSelector(
+	selectAppSlice,
+	slice => slice.locale,
+);

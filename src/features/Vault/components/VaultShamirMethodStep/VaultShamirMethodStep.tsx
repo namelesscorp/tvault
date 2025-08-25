@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { RouteTypes } from "interfaces";
@@ -11,6 +12,7 @@ import { selectVaultOpenWizardState } from "../../state/Vault.selectors";
 type ShamirInputMethod = "manual" | "file";
 
 const VaultShamirMethodStep = () => {
+	const { formatMessage } = useIntl();
 	const wizard = useSelector(selectVaultOpenWizardState);
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
@@ -37,20 +39,29 @@ const VaultShamirMethodStep = () => {
 
 	return (
 		<div>
-			<UISectionHeading icon={icons.unlock} text={"Open"} />
+			<UISectionHeading
+				icon={icons.unlock}
+				text={formatMessage({ id: "title.open" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 2 / 6 — Shamir Input Method
+				{formatMessage({ id: "vault.shamirMethodStep.step" })}
 			</p>
 			<div className="grid grid-cols-[260px_260px] justify-center p-[20px] bg-white/5 rounded-[10px] mt-[20px] gap-[40px]">
 				<UIRadioCard
-					title="Enter"
-					subtitle="Manual input"
+					title={formatMessage({
+						id: "vault.shamirMethodStep.manual",
+					})}
+					subtitle={formatMessage({
+						id: "vault.shamirMethodStep.manualDescription",
+					})}
 					selected={selected === "manual"}
 					onClick={() => handleSelect("manual")}
 				/>
 				<UIRadioCard
-					title="File"
-					subtitle="Upload keys from a json file"
+					title={formatMessage({ id: "vault.shamirMethodStep.file" })}
+					subtitle={formatMessage({
+						id: "vault.shamirMethodStep.fileDescription",
+					})}
 					selected={selected === "file"}
 					onClick={() => handleSelect("file")}
 				/>
@@ -58,13 +69,13 @@ const VaultShamirMethodStep = () => {
 			<div className="flex items-center gap-[10px] mt-[20px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={() => navigate(-1)}
 					style={{ width: "fit-content" }}
 				/>
 				<UIButton
 					icon={icons.arrow_right}
-					text="Next"
+					text={formatMessage({ id: "common.next" })}
 					onClick={next}
 					style={{ width: "fit-content" }}
 				/>

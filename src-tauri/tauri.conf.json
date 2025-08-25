@@ -1,23 +1,25 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
-	"productName": "tvault-client",
+	"productName": "Trust Vault",
 	"version": "0.1.0",
 	"identifier": "tech.nldev.tvault-client",
 	"build": {
 		"beforeDevCommand": "yarn dev",
 		"devUrl": "http://localhost:1420",
-		"beforeBuildCommand": "yarn build",
+		"beforeBuildCommand": "yarn build:prod",
 		"frontendDist": "../build"
 	},
 	"app": {
+		"macOSPrivateApi": true,
 		"windows": [
 			{
-				"title": "tvault-client",
+				"title": "Trust Vault",
 				"width": 1200,
 				"height": 800,
 				"resizable": false,
 				"decorations": false,
-				"transparent": false
+				"transparent": true,
+				"shadow": false
 			}
 		],
 		"security": {

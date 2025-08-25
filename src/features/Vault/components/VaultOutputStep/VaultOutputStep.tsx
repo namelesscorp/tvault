@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { RouteTypes } from "interfaces";
@@ -11,6 +12,7 @@ import { selectVaultWizardState } from "../../state/Vault.selectors";
 export type ShareDest = "file" | "stdout";
 
 const VaultOutputStep = () => {
+	const { formatMessage } = useIntl();
 	const wizard = useSelector(selectVaultWizardState);
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
@@ -39,21 +41,28 @@ const VaultOutputStep = () => {
 
 	return (
 		<div>
-			<UISectionHeading icon={icons.lock} text={"Create"} />
+			<UISectionHeading
+				icon={icons.lock}
+				text={formatMessage({ id: "title.create" })}
+			/>
 			<p className="text-[20px] text-medium text-white text-center mt-[10px]">
-				Step 5 / 6 — Save container share tokens
+				{formatMessage({ id: `vault.output.step.${wizard.tokenType}` })}
 			</p>
 			<div
 				className={`grid grid-cols-[260px_260px] justify-center p-[20px] bg-white/5 rounded-[10px] mt-[20px] gap-[40px]`}>
 				<UIRadioCard
-					title="File"
-					subtitle="Tokens will be saved to file for open container."
+					title={formatMessage({ id: "vault.output.file" })}
+					subtitle={formatMessage({
+						id: "vault.output.fileDescription",
+					})}
 					selected={shareDest === "file"}
 					onClick={() => setDest("file")}
 				/>
 				<UIRadioCard
-					title="Screen"
-					subtitle="Tokens will be displayed on screen for open container."
+					title={formatMessage({ id: "vault.output.stdout" })}
+					subtitle={formatMessage({
+						id: "vault.output.stdoutDescription",
+					})}
 					selected={shareDest === "stdout"}
 					onClick={() => setDest("stdout")}
 				/>
@@ -61,13 +70,13 @@ const VaultOutputStep = () => {
 			<div className="flex items-center gap-[10px] mt-[20px]">
 				<UIButton
 					icon={icons.back}
-					text="Back"
+					text={formatMessage({ id: "common.back" })}
 					onClick={() => navigate(-1)}
 					style={{ width: "fit-content" }}
 				/>
 				<UIButton
 					icon={icons.arrow_right}
-					text="Next"
+					text={formatMessage({ id: "common.next" })}
 					onClick={next}
 					style={{ width: "fit-content" }}
 				/>

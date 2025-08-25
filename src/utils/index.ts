@@ -10,3 +10,5 @@ export * from "./css";
 export * from "./mountDir";
 export * from "./guards";
 export * from "./hooks";
+export * from "./localization";
+export * from "./error";
