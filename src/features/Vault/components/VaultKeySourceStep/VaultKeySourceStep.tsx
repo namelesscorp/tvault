@@ -6,7 +6,7 @@ import { RouteTypes } from "interfaces";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UISectionHeading } from "features/UI";
 import { UIRadioCard } from "features/UI";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 import { vaultSetWizardState } from "../../state/Vault.actions";
 import { selectVaultWizardState } from "../../state/Vault.selectors";
 

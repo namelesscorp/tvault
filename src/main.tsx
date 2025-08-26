@@ -5,7 +5,7 @@ import { ToastContainer } from "react-toastify";
 import { App } from "features/App";
 import { environmentEnv, environmentVersion } from "features/Environment";
 import { store } from "features/Store";
-import "~/assets/fonts/Inter/inter.css";
+import "assets/fonts/Inter/inter.css";
 import "./index.css";
 
 console.info(

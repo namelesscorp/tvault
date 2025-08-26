@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 
 interface UISelectProps {
 	value: string;

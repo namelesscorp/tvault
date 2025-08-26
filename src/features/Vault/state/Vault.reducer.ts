@@ -1,5 +1,6 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 import type { ContainerInfoData } from "interfaces";
+import { RouteTypes } from "interfaces";
 import {
 	ResealData,
 	SHAMIR_DEFAULT_THRESHOLD,
@@ -27,6 +28,9 @@ const initialState: VaultSlice = {
 		sharePath: "",
 		integrityProvider: "none",
 		additionalPassword: "",
+		lastStep: undefined,
+		encryptCompleted: false,
+		encryptResult: undefined,
 	},
 	openWizardState: {
 		containerPath: "",
@@ -36,6 +40,9 @@ const initialState: VaultSlice = {
 		tokenType: "none",
 		integrityProvider: "none",
 		method: "password",
+		lastStep: undefined,
+		decryptCompleted: false,
+		decryptResult: undefined,
 	},
 	containers: {},
 	recent: [],
@@ -131,6 +138,26 @@ export const vaultSlice = createSlice({
 		vaultResetWizardState: state => {
 			state.wizardState = initialState.wizardState;
 		},
+		vaultUpdateWizardLastStep: (
+			state,
+			{ payload }: PayloadAction<RouteTypes>,
+		) => {
+			state.wizardState.lastStep = payload;
+		},
+		vaultSetWizardEncryptCompleted: (
+			state,
+			{
+				payload,
+			}: PayloadAction<{
+				masterToken?: string;
+				shares?: string[];
+				password?: string;
+				additionalPassword?: string;
+			}>,
+		) => {
+			state.wizardState.encryptCompleted = true;
+			state.wizardState.encryptResult = payload;
+		},
 		vaultSetOpenWizardState: (
 			state,
 			{ payload }: PayloadAction<VaultOpenWizardState>,
@@ -139,6 +166,24 @@ export const vaultSlice = createSlice({
 		},
 		vaultResetOpenWizardState: state => {
 			state.openWizardState = initialState.openWizardState;
+		},
+		vaultUpdateOpenWizardLastStep: (
+			state,
+			{ payload }: PayloadAction<RouteTypes>,
+		) => {
+			state.openWizardState.lastStep = payload;
+		},
+		vaultSetOpenWizardDecryptCompleted: (
+			state,
+			{
+				payload,
+			}: PayloadAction<{
+				mountDir: string;
+				containerPath: string;
+			}>,
+		) => {
+			state.openWizardState.decryptCompleted = true;
+			state.openWizardState.decryptResult = payload;
 		},
 		vaultAddResealData: (state, { payload }: PayloadAction<ResealData>) => {
 			const exists = state.resealData.some(
@@ -176,8 +221,12 @@ export const {
 	vaultRemoveRecent,
 	vaultSetWizardState,
 	vaultResetWizardState,
+	vaultUpdateWizardLastStep,
+	vaultSetWizardEncryptCompleted,
 	vaultSetOpenWizardState,
 	vaultResetOpenWizardState,
+	vaultUpdateOpenWizardLastStep,
+	vaultSetOpenWizardDecryptCompleted,
 	vaultAddResealData,
 	vaultRemoveResealData,
 	vaultClearResealData,

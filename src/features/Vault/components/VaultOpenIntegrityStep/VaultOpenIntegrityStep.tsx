@@ -8,7 +8,7 @@ import { useAppDispatch } from "features/Store";
 import { UIButton, UIInput, UISectionHeading } from "features/UI";
 import { vaultSetOpenWizardState } from "features/Vault/state/Vault.actions";
 import { selectVaultOpenWizardState } from "features/Vault/state/Vault.selectors";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 
 const VaultOpenIntegrityStep = () => {
 	const { formatMessage } = useIntl();

@@ -13,10 +13,10 @@ import {
 	getMountPathWithFallback,
 	useRequestGuard,
 } from "utils";
+import { useLocale } from "features/Localization";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UICheckbox, UIInput, UISectionHeading } from "features/UI";
-import { icons } from "~/assets/collections/icons";
-import { useLocale } from "~/features/Localization";
+import { icons } from "assets";
 import { useContainerInfo } from "../../hooks/useContainerInfo";
 import {
 	vaultAddRecentWithMountPath,

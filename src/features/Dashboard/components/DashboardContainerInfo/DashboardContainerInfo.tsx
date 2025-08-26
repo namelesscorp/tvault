@@ -6,7 +6,7 @@ import { formatLocalDateTime } from "utils";
 import { UIButton, UIEditableField } from "features/UI";
 import { useContainerEdit } from "features/Vault/hooks";
 import { selectVaultResealDataByPath } from "features/Vault/state/Vault.selectors";
-import { icons } from "assets/collections/icons";
+import { icons } from "assets";
 
 export interface DashboardContainerInfoProps {
 	path: string;
@@ -43,6 +43,7 @@ export const DashboardContainerInfo: React.FC<DashboardContainerInfoProps> = ({
 		updateEditData,
 		applyEditToResealData,
 	} = useContainerEdit(info);
+
 	return (
 		<div className="flex flex-col gap-[20px] p-[15px] bg-white/5 rounded-[10px] max-h-[645px] overflow-y-auto">
 			<div className="flex justify-start gap-[10px]">
@@ -101,6 +102,14 @@ export const DashboardContainerInfo: React.FC<DashboardContainerInfoProps> = ({
 					{formatMessage({ id: "container.version" })}:
 				</p>
 				<p>{info?.version ?? "—"}</p>
+				<p className="opacity-50">
+					{formatMessage({ id: "container.state" })}:
+				</p>
+				<p>
+					{isOpened
+						? formatMessage({ id: "container.opened" })
+						: formatMessage({ id: "container.closed" })}
+				</p>
 				<p className="opacity-50">
 					{formatMessage({ id: "container.path" })}:
 				</p>
@@ -196,14 +205,18 @@ export const DashboardContainerInfo: React.FC<DashboardContainerInfoProps> = ({
 				<p className="opacity-50">
 					{formatMessage({ id: "container.shares" })}:
 				</p>
-				<p>{info?.shares ?? "—"}</p>
-				<p className="opacity-50">
-					{formatMessage({ id: "container.threshold" })}:
-				</p>
-				<p>{info?.threshold ?? "—"}</p>
-				<p className="opacity-50">
-					{formatMessage({ id: "container.mountPath" })}:
-				</p>
+				{info?.token_type === "share" && (
+					<Fragment>
+						<p>{info?.shares ?? "—"}</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.threshold" })}:
+						</p>
+						<p>{info?.threshold ?? "—"}</p>
+						<p className="opacity-50">
+							{formatMessage({ id: "container.mountPath" })}:
+						</p>
+					</Fragment>
+				)}
 				<p className="break-all">{mountDir || savedMountPath || "—"}</p>
 			</div>
 		</div>

@@ -11,7 +11,7 @@ import {
 	UIEditableField,
 	UIImgIcon,
 } from "features/UI";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 import { useContainerEdit, useContainerInfo, useVault } from "../../hooks";
 import {
 	selectVaultContainers,
@@ -248,14 +248,21 @@ const ContainerDetails = () => {
 							{formatMessage({ id: "container.compression" })}:
 						</p>
 						<p>{result.data?.compression_type ?? "—"}</p>
-						<p className="opacity-50">
-							{formatMessage({ id: "container.shares" })}:
-						</p>
-						<p>{result.data?.shares ?? "—"}</p>
-						<p className="opacity-50">
-							{formatMessage({ id: "container.threshold" })}:
-						</p>
-						<p>{result.data?.threshold ?? "—"}</p>
+						{result.data?.token_type === "share" && (
+							<Fragment>
+								<p className="opacity-50">
+									{formatMessage({ id: "container.shares" })}:
+								</p>
+								<p>{result.data?.shares ?? "—"}</p>
+								<p className="opacity-50">
+									{formatMessage({
+										id: "container.threshold",
+									})}
+									:
+								</p>
+								<p>{result.data?.threshold ?? "—"}</p>
+							</Fragment>
+						)}
 					</div>
 				</div>
 			)}

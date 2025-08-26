@@ -2,13 +2,15 @@ import { Outlet } from "react-router-dom";
 import {
 	useBackgroundContainerScan,
 	useVaultStateReset,
-} from "~/features/Vault";
+	useWizardStepTracking,
+} from "features/Vault";
 import { LayoutHeader } from "../LayoutHeader";
 import { LayoutSidebar } from "../LayoutSidebar";
 
 const Layout = () => {
 	useVaultStateReset();
 	useBackgroundContainerScan();
+	useWizardStepTracking();
 
 	return (
 		<div className="h-screen flex flex-col bg-[#101318]">

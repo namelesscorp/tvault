@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 import { RouteTypes } from "interfaces";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UIInput, UISectionHeading } from "features/UI";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 import { vaultSetOpenWizardState } from "../../state/Vault.actions";
 import { selectVaultOpenWizardState } from "../../state/Vault.selectors";
 

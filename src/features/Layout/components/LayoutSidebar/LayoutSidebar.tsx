@@ -2,59 +2,65 @@ import { useMemo } from "react";
 import { useIntl } from "react-intl";
 import { NavLink, useLocation } from "react-router-dom";
 import { RouteTypes } from "interfaces";
-import { icons } from "~/assets/collections/icons";
-import { UIButton } from "~/features/UI";
-import { UIIconButton } from "~/features/UI/components/UIIconButton";
-
-const items = [
-	{ to: RouteTypes.Dashboard, label: "menu.dashboard", icon: icons.grid },
-	{ to: RouteTypes.VaultCreateBasic, label: "menu.create", icon: icons.lock },
-	{
-		to: RouteTypes.VaultOpenContainer,
-		label: "menu.open",
-		icon: icons.unlock,
-	},
-];
+import { UIButton, UIIconButton } from "features/UI";
+import { useWizardNavigation } from "features/Vault";
+import { icons } from "assets";
 
 const LayoutSidebar = () => {
 	const { pathname } = useLocation();
 	const { formatMessage } = useIntl();
+	const { navigateToLastCreateStep, navigateToLastOpenStep } =
+		useWizardNavigation();
 
 	const navItems = useMemo(
-		() =>
-			items.map(({ to, label, icon }) => {
-				let isActive = false;
-
-				if (to === RouteTypes.Dashboard) {
-					isActive = pathname === to;
-				} else if (to === RouteTypes.VaultCreateBasic) {
-					isActive = pathname.startsWith("/create");
-				} else if (to === RouteTypes.VaultOpenContainer) {
-					isActive = pathname.startsWith("/open");
-				}
-
-				return {
-					to,
-					label,
-					icon,
-					isActive,
-				};
-			}),
-		[pathname],
+		() => [
+			{
+				to: RouteTypes.Dashboard,
+				label: "menu.dashboard",
+				icon: icons.grid,
+				isActive: pathname === RouteTypes.Dashboard,
+				onClick: undefined,
+			},
+			{
+				to: RouteTypes.VaultCreateBasic,
+				label: "menu.create",
+				icon: icons.lock,
+				isActive: pathname.startsWith("/create"),
+				onClick: navigateToLastCreateStep,
+			},
+			{
+				to: RouteTypes.VaultOpenContainer,
+				label: "menu.open",
+				icon: icons.unlock,
+				isActive: pathname.startsWith("/open"),
+				onClick: navigateToLastOpenStep,
+			},
+		],
+		[pathname, navigateToLastCreateStep, navigateToLastOpenStep],
 	);
 
 	return (
-		<aside className="w-[200px] min-w-[200px] flex flex-col justify-between bg-black/10 border-r border-white/10 p-[10px]">
+		<aside className="flex flex-col justify-between w-[280px] h-full p-[20px] bg-white/5 border-r border-white/10">
 			<nav className="flex flex-col gap-[10px]">
-				{navItems.map(({ to, label, icon, isActive }) => (
-					<NavLink key={to} to={to}>
-						<UIButton
-							text={formatMessage({ id: label })}
-							icon={icon}
-							active={isActive}
-						/>
-					</NavLink>
-				))}
+				{navItems.map(({ to, label, icon, isActive, onClick }) =>
+					onClick ? (
+						<button key={to} onClick={onClick} className="w-full">
+							<UIButton
+								text={formatMessage({ id: label })}
+								icon={icon}
+								active={isActive}
+							/>
+						</button>
+					) : (
+						<NavLink key={to} to={to}>
+							<UIButton
+								text={formatMessage({ id: label })}
+								icon={icon}
+								active={isActive}
+							/>
+						</NavLink>
+					),
+				)}
 			</nav>
 			<div className="flex items-center gap-[10px]">
 				<NavLink to={RouteTypes.Settings}>

@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { RouteTypes } from "interfaces";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UIRadioCard, UISectionHeading } from "features/UI";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 import { vaultSetWizardState } from "../../state/Vault.actions";
 import { selectVaultWizardState } from "../../state/Vault.selectors";
 

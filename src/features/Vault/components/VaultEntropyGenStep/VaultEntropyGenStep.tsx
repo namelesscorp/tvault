@@ -5,7 +5,7 @@ import { RouteTypes } from "interfaces";
 import { EntropyCanvas } from "features/EntropyCanvas";
 import { useAppDispatch } from "features/Store";
 import { UISectionHeading } from "features/UI";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 import { vaultSetWizardState } from "../../state/Vault.actions";
 import { selectVaultWizardState } from "../../state/Vault.selectors";
 

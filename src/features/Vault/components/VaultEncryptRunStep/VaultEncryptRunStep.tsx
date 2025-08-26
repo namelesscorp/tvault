@@ -7,14 +7,15 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useEffectOnce } from "react-use";
 import { RouteTypes } from "interfaces";
-import { devError } from "utils";
+import { devError, devLog } from "utils";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UISectionHeading } from "features/UI";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 import { useEncrypt } from "../../hooks/useEncrypt";
 import {
 	vaultAddRecentWithMountPath,
 	vaultResetWizardState,
+	vaultSetWizardEncryptCompleted,
 } from "../../state/Vault.actions";
 import { selectVaultWizardState } from "../../state/Vault.selectors";
 
@@ -37,7 +38,35 @@ const VaultEncryptRunStep = () => {
 
 	const { progress, done, result, error, run } = useEncrypt(wizard);
 
+	const isCompleted = wizard.encryptCompleted;
+	const finalDone = done || isCompleted;
+	const finalResult =
+		result ||
+		(isCompleted
+			? {
+					masterToken: wizard.encryptResult?.masterToken,
+					shares: wizard.encryptResult?.shares,
+				}
+			: null);
+
 	useEffectOnce(() => {
+		if (isCompleted) {
+			setSavedPassword(wizard.encryptResult?.password || "");
+			setSavedGeneratedKey(wizard.generatedKey || "");
+			setSavedTokenType(wizard.tokenType || "");
+			setSavedAdditionalPassword(
+				wizard.encryptResult?.additionalPassword || "",
+			);
+
+			if (wizard.shareDest === "file" && wizard.sharePath) {
+				setSavedSharePath(wizard.sharePath);
+				setSavedShareDest(wizard.shareDest);
+			} else if (wizard.shareDest === "stdout") {
+				setSavedShareDest(wizard.shareDest);
+			}
+			return;
+		}
+
 		if (ENCRYPT_RUN_GUARD) return;
 		ENCRYPT_RUN_GUARD = true;
 
@@ -60,13 +89,24 @@ const VaultEncryptRunStep = () => {
 		};
 	});
 
-	if (done && !error) {
+	if (finalDone && !error) {
 		ENCRYPT_RUN_GUARD = false;
+
+		if (!isCompleted && finalResult) {
+			dispatch(
+				vaultSetWizardEncryptCompleted({
+					masterToken: finalResult.masterToken,
+					shares: finalResult.shares,
+					password: savedPassword,
+					additionalPassword: savedAdditionalPassword,
+				}),
+			);
+		}
 
 		if (!RECENT_ADDED_GUARD && wizard.outputPath) {
 			RECENT_ADDED_GUARD = true;
 
-			console.log(
+			devLog(
 				"[VaultEncryptRunStep] Container created successfully, wizard state:",
 				wizard,
 			);
@@ -75,7 +115,7 @@ const VaultEncryptRunStep = () => {
 
 			(async () => {
 				try {
-					console.log(
+					devLog(
 						"[VaultEncryptRunStep] Adding container to recent:",
 						containerPath,
 					);
@@ -91,7 +131,7 @@ const VaultEncryptRunStep = () => {
 							}[]
 						>(KEY)) ?? [];
 
-					console.log(
+					devLog(
 						"[VaultEncryptRunStep] Current recent list:",
 						recent,
 					);
@@ -105,7 +145,7 @@ const VaultEncryptRunStep = () => {
 					});
 					const capped = filtered.slice(0, 100);
 
-					console.log(
+					devLog(
 						"[VaultEncryptRunStep] Updated recent list:",
 						capped,
 					);
@@ -116,11 +156,11 @@ const VaultEncryptRunStep = () => {
 					dispatch(
 						vaultAddRecentWithMountPath({ path: containerPath }),
 					);
-					console.log(
+					devLog(
 						"[VaultEncryptRunStep] Container successfully added to recent",
 					);
 				} catch (e) {
-					console.error(
+					devError(
 						"[VaultEncryptRunStep] Error adding to recent:",
 						e,
 					);
@@ -186,7 +226,7 @@ const VaultEncryptRunStep = () => {
 		);
 	}
 
-	if (!done) {
+	if (!done && !finalResult) {
 		return (
 			<div>
 				<UISectionHeading
@@ -214,9 +254,10 @@ const VaultEncryptRunStep = () => {
 		);
 	}
 
-	const res = result as { masterToken?: string; shares?: string[] } | null;
-
-	console.log(res, savedShareDest, savedSharePath);
+	const res = finalResult as {
+		masterToken?: string;
+		shares?: string[];
+	} | null;
 
 	return (
 		<div>

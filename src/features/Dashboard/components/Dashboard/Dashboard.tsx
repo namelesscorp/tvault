@@ -10,6 +10,7 @@ import {
 	shouldRemoveContainerOnError,
 	useRequestGuard,
 } from "utils";
+import { LocalizationTypes, useLocale } from "features/Localization";
 import { useAppDispatch } from "features/Store";
 import { UIContainerRow, UISectionHeading } from "features/UI";
 import { useContainerInfo, useVault } from "features/Vault/hooks";
@@ -23,8 +24,7 @@ import {
 	selectVaultContainers,
 	selectVaultRecent,
 } from "features/Vault/state/Vault.selectors";
-import { icons } from "assets/collections/icons";
-import { LocalizationTypes, useLocale } from "~/features/Localization";
+import { icons } from "assets";
 import { DashboardContainerInfo } from "../DashboardContainerInfo";
 
 const Dashboard = () => {

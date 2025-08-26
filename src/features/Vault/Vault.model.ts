@@ -1,4 +1,5 @@
 import { ContainerInfoData } from "interfaces";
+import { RouteTypes } from "interfaces";
 
 export type KeySource = "generated" | "manual";
 export type ShareEncoding = "base64" | "hex";
@@ -51,6 +52,18 @@ export interface VaultWizardState {
 	/* integrity */
 	integrityProvider: IntegrityProvider;
 	additionalPassword?: string;
+
+	/* last step tracking */
+	lastStep?: RouteTypes;
+
+	/* execution results */
+	encryptCompleted?: boolean;
+	encryptResult?: {
+		masterToken?: string;
+		shares?: string[];
+		password?: string;
+		additionalPassword?: string;
+	};
 }
 
 export interface VaultOpenWizardState {
@@ -78,6 +91,16 @@ export interface VaultOpenWizardState {
 
 	/* quick open flow: skip selection/summary and jump between only required steps */
 	quickOpen?: boolean;
+
+	/* last step tracking */
+	lastStep?: RouteTypes;
+
+	/* execution results */
+	decryptCompleted?: boolean;
+	decryptResult?: {
+		mountDir: string;
+		containerPath: string;
+	};
 }
 
 export interface ResealData {

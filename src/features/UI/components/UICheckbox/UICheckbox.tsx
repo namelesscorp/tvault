@@ -1,5 +1,5 @@
 import { cn } from "utils";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 
 interface UICheckboxProps {
 	checked: boolean;

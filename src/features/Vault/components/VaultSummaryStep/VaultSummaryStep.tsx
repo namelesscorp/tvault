@@ -5,7 +5,7 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { RouteTypes } from "interfaces";
 import { UIButton, UISectionHeading } from "features/UI";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 import { selectVaultWizardState } from "../../state/Vault.selectors";
 
 const CONTAINER_VERSION = 1;

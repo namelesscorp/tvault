@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 build
+.env
 
 # Editor directories and files
 .vscode
@@ -25,3 +26,5 @@ build
 
 *.prof
 *.out
+
+mac_*.sh

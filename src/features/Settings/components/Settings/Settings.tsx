@@ -8,13 +8,13 @@ import { appChangeLocale } from "features/App/state/App.actions";
 import { selectAppLocale } from "features/App/state/App.selectors";
 import { LocalizationTypes } from "features/Localization/Localization.model";
 import { useAppDispatch } from "features/Store";
+import { UIButton, UIInput, UISectionHeading, UISelect } from "features/UI";
 import {
 	vaultChangeContainersPath,
 	vaultScanContainersDirectory,
 } from "features/Vault/state/Vault.actions";
 import { selectVaultContainersPath } from "features/Vault/state/Vault.selectors";
-import { icons } from "~/assets/collections/icons";
-import { UIButton, UIInput, UISectionHeading, UISelect } from "~/features/UI";
+import { icons } from "assets";
 
 const Settings = () => {
 	const { formatMessage } = useIntl();

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 import { UIInput } from "../UIInput";
 
 interface UIEditablePasswordFieldProps {

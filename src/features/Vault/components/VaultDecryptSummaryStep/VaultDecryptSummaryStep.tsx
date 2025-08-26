@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { RouteTypes } from "interfaces";
 import { UIButton, UISectionHeading } from "features/UI";
 import { selectVaultOpenWizardState } from "features/Vault/state/Vault.selectors";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 import { useContainerInfo } from "../../hooks/useContainerInfo";
 
 const humanIntegrity = { none: "None", hmac: "HMAC-SHA256" } as const;

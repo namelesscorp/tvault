@@ -6,13 +6,13 @@ import {
 	selectAppInited,
 	selectAppLocale,
 } from "features/App/state/App.selectors";
-import { Router } from "features/Router";
-import { useAppDispatch } from "features/Store";
-import { store } from "features/Store";
 import {
 	DEFAULT_LOCALE,
 	getLocalizationFiles,
-} from "~/features/Localization/Localization.model";
+} from "features/Localization/Localization.model";
+import { Router } from "features/Router";
+import { useAppDispatch } from "features/Store";
+import { store } from "features/Store";
 
 const App = () => {
 	const dispatch = useAppDispatch();

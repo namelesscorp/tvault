@@ -9,12 +9,13 @@ import { RouteTypes } from "interfaces";
 import { createAsyncOnceGuard, devError, devLog, useRequestGuard } from "utils";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UISectionHeading } from "features/UI";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 import { ResealData } from "../../Vault.model";
 import { useDecrypt } from "../../hooks/useDecrypt";
 import {
 	vaultAddRecentWithMountPath,
 	vaultAddResealData,
+	vaultSetOpenWizardDecryptCompleted,
 } from "../../state/Vault.actions";
 import { vaultSlice } from "../../state/Vault.reducer";
 import { selectVaultOpenWizardState } from "../../state/Vault.selectors";
@@ -32,7 +33,7 @@ const saveRecentData = createAsyncOnceGuard(
 						lastMountPath?: string;
 					}[]
 				>(KEY)) ?? [];
-			console.log("Saving mount path:", {
+			devLog("Saving mount path:", {
 				path: containerPath,
 				mountPath: mountDir,
 			});
@@ -47,7 +48,7 @@ const saveRecentData = createAsyncOnceGuard(
 			const capped = filtered.slice(0, 100);
 			await store.set(KEY, capped);
 			await store.save();
-			console.log("Saved recent containers:", capped);
+			devLog("Saved recent containers:", capped);
 			dispatch(
 				vaultAddRecentWithMountPath({
 					path: containerPath,
@@ -74,9 +75,18 @@ const VaultDecryptRunStep = () => {
 
 	const { progress, done, error, run } = useDecrypt();
 
+	const isCompleted = wizard.decryptCompleted;
+	const finalDone = done || isCompleted;
+
 	const { fn: guardedRun, reset: resetDecrypt } = useRequestGuard(run);
 
 	useEffect(() => {
+		if (isCompleted && wizard.decryptResult) {
+			setSavedMountDir(wizard.decryptResult.mountDir);
+			setSavedContainerPath(wizard.decryptResult.containerPath);
+			return;
+		}
+
 		if (!savedMountDir && !savedContainerPath) {
 			setSavedMountDir(wizard.mountDir);
 			setSavedContainerPath(wizard.containerPath);
@@ -86,10 +96,16 @@ const VaultDecryptRunStep = () => {
 		wizard.containerPath,
 		savedMountDir,
 		savedContainerPath,
+		isCompleted,
+		wizard.decryptResult,
 	]);
 
 	useEffect(() => {
-		if (savedMountDir && savedContainerPath && !done && !error) {
+		if (isCompleted) {
+			return;
+		}
+
+		if (savedMountDir && savedContainerPath && !finalDone && !error) {
 			const isPasswordMethod = wizard.tokenType === "none";
 			const isMasterMethod = wizard.tokenType === "master";
 			const isShamirMethod = wizard.tokenType === "share";
@@ -187,15 +203,25 @@ const VaultDecryptRunStep = () => {
 		savedMountDir,
 		savedContainerPath,
 		wizard,
-		done,
+		finalDone,
 		error,
 		guardedRun,
 		progress,
+		isCompleted,
 	]);
 
 	useEffect(() => {
-		if (done && !error && !resealDataSaved) {
+		if (finalDone && !error && !resealDataSaved) {
 			setResealDataSaved(true);
+
+			if (!isCompleted) {
+				dispatch(
+					vaultSetOpenWizardDecryptCompleted({
+						mountDir: savedMountDir,
+						containerPath: savedContainerPath,
+					}),
+				);
+			}
 
 			const resealData: ResealData = {
 				containerPath: savedContainerPath,
@@ -271,13 +297,9 @@ const VaultDecryptRunStep = () => {
 					}
 				}
 			})();
-
-			try {
-				dispatch(vaultSlice.actions.vaultResetOpenWizardState());
-			} catch {}
 		}
 	}, [
-		done,
+		finalDone,
 		error,
 		resealDataSaved,
 		savedContainerPath,
@@ -285,6 +307,7 @@ const VaultDecryptRunStep = () => {
 		containerInfo,
 		wizard,
 		dispatch,
+		isCompleted,
 	]);
 
 	if (error) {
@@ -322,7 +345,7 @@ const VaultDecryptRunStep = () => {
 		);
 	}
 
-	if (!done) {
+	if (!finalDone) {
 		return (
 			<div>
 				<UISectionHeading
@@ -397,7 +420,12 @@ const VaultDecryptRunStep = () => {
 						<UIButton
 							icon={icons.check}
 							text={formatMessage({ id: "common.done" })}
-							onClick={() => navigate(RouteTypes.Dashboard)}
+							onClick={() => {
+								dispatch(
+									vaultSlice.actions.vaultResetOpenWizardState(),
+								);
+								navigate(RouteTypes.Dashboard);
+							}}
 							style={{ width: "fit-content" }}
 						/>
 					</div>

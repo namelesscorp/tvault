@@ -7,10 +7,10 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { z } from "zod";
 import { RouteTypes } from "interfaces";
-import { icons } from "~/assets/collections/icons";
-import { LocalizationTypes, useLocale } from "~/features/Localization";
-import { useAppDispatch } from "~/features/Store";
-import { UIButton, UIInput, UISectionHeading } from "~/features/UI";
+import { LocalizationTypes, useLocale } from "features/Localization";
+import { useAppDispatch } from "features/Store";
+import { UIButton, UIInput, UISectionHeading } from "features/UI";
+import { icons } from "assets";
 import { vaultSetWizardState } from "../../state/Vault.actions";
 import { selectVaultWizardState } from "../../state/Vault.selectors";
 

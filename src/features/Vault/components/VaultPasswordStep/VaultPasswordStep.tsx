@@ -4,10 +4,10 @@ import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { RouteTypes } from "interfaces";
+import { LocalizationTypes, useLocale } from "features/Localization";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UIPasswordField, UISectionHeading } from "features/UI";
-import { icons } from "~/assets/collections/icons";
-import { LocalizationTypes, useLocale } from "~/features/Localization";
+import { icons } from "assets";
 import { vaultSetOpenWizardState } from "../../state/Vault.actions";
 import { selectVaultOpenWizardState } from "../../state/Vault.selectors";
 

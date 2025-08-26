@@ -1,6 +1,6 @@
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { icons } from "~/assets/collections/icons";
-import { UIImgIcon } from "~/features/UI";
+import { UIImgIcon } from "features/UI";
+import { icons } from "assets";
 
 const appWindow = getCurrentWebviewWindow();
 

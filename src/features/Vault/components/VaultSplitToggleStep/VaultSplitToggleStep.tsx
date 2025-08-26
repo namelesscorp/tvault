@@ -6,7 +6,7 @@ import { RouteTypes } from "interfaces";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UIRadioCard, UISectionHeading } from "features/UI";
 import type { TokenType } from "features/Vault/Vault.model";
-import { icons } from "~/assets/collections/icons";
+import { icons } from "assets";
 import { vaultSetWizardState } from "../../state/Vault.actions";
 import { selectVaultWizardState } from "../../state/Vault.selectors";
 

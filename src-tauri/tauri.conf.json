@@ -36,6 +36,14 @@
 			"icons/icon.icns",
 			"icons/icon.ico"
 		],
-		"externalBin": ["./binaries/tvault-core"]
+		"externalBin": ["./binaries/tvault-core"],
+		"macOS": {
+			"signingIdentity": "Developer ID Application: Dmitrii Stepanov (2NG4L96LNP)",
+			"hardenedRuntime": true,
+			"entitlements": "./Entitlements.plist"
+		},
+		"windows": {
+			"webviewInstallMode": { "type": "downloadBootstrapper" }
+		}
 	}
 }
