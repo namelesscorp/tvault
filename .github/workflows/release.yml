@@ -112,40 +112,45 @@ jobs:
               run: |
                   set -euo pipefail
 
-                  VERSION_TAG="${GITHUB_REF_NAME}"      # v0.1.0-beta
-                  VERSION_NO_V="${VERSION_TAG#v}"       # 0.1.0-beta
+                  VERSION_TAG="${GITHUB_REF_NAME}"
+                  VERSION_NO_V="${VERSION_TAG#v}"
                   URL_BASE="https://github.com/${{ github.repository }}/releases/download/${VERSION_TAG}"
 
+                  # helpers
+                  pick() { find dist -type f -name "$2" | grep -F "$1" | head -n 1; }
+                  req()  { [ -f "$1" ] || { echo "❌ not found: $1"; exit 1; }; }
+
+                  # ---- locate built artifacts ----
+                  MAC_ARM_DMG=$(pick 'aarch64-apple-darwin' '*.dmg');                 req "$MAC_ARM_DMG"
+                  MAC_X64_DMG=$(pick 'x86_64-apple-darwin' '*.dmg');                  req "$MAC_X64_DMG"
+                  MAC_ARM_TGZ=$(pick 'aarch64-apple-darwin' '*.app.tar.gz');          req "$MAC_ARM_TGZ"
+                  MAC_X64_TGZ=$(pick 'x86_64-apple-darwin' '*.app.tar.gz');           req "$MAC_X64_TGZ"
+                  WIN_X64_EXE=$(pick 'x86_64-pc-windows-msvc' '*.exe');               req "$WIN_X64_EXE"
+                  WIN_X86_EXE=$(pick 'i686-pc-windows-msvc' '*.exe');                 req "$WIN_X86_EXE"
+
                   mkdir -p release
-
-                  # macOS ARM
-                  MAC_ARM_DMG=$(find dist -type f -name '*.dmg' | grep 'aarch64-apple-darwin' | head -n 1)
-                  MAC_ARM_TGZ=$(find dist -type f -name '*.app.tar.gz' | grep 'aarch64-apple-darwin' | head -n 1)
                   cp "$MAC_ARM_DMG" "release/TrustVault_${VERSION_NO_V}_aarch64.dmg"
-                  cp "$MAC_ARM_TGZ" "release/TrustVault_${VERSION_NO_V}_aarch64.app.tar.gz"
-
-                  # macOS x64
-                  MAC_X64_DMG=$(find dist -type f -name '*.dmg' | grep 'x86_64-apple-darwin' | head -n 1)
-                  MAC_X64_TGZ=$(find dist -type f -name '*.app.tar.gz' | grep 'x86_64-apple-darwin' | head -n 1)
                   cp "$MAC_X64_DMG" "release/TrustVault_${VERSION_NO_V}_x64.dmg"
+                  cp "$MAC_ARM_TGZ" "release/TrustVault_${VERSION_NO_V}_aarch64.app.tar.gz"
                   cp "$MAC_X64_TGZ" "release/TrustVault_${VERSION_NO_V}_x64.app.tar.gz"
-
-                  # Windows x64
-                  WIN_X64_EXE=$(find dist -type f -name '*.exe' | grep 'x86_64-pc-windows-msvc' | head -n 1)
                   cp "$WIN_X64_EXE" "release/TrustVault_${VERSION_NO_V}_x64-setup.exe"
-
-                  # Windows x86
-                  WIN_X86_EXE=$(find dist -type f -name '*.exe' | grep 'i686-pc-windows-msvc' | head -n 1)
                   cp "$WIN_X86_EXE" "release/TrustVault_${VERSION_NO_V}_x86-setup.exe"
 
+                  # ---- signatures from tauri-generated updater.json ----
                   sudo apt-get update -y >/dev/null
                   sudo apt-get install -y jq >/dev/null
 
-                  SIG_MAC_ARM=$(jq -r '.platforms["darwin-aarch64"].signature' dist/tvault-client_aarch64-apple-darwin/**/updater.json)
-                  SIG_MAC_X64=$(jq -r '.platforms["darwin-x86_64"].signature' dist/tvault-client_x86_64-apple-darwin/**/updater.json)
-                  SIG_WIN_X64=$(jq -r '.platforms["windows-x86_64"].signature' dist/tvault-client_x86_64-pc-windows-msvc/**/updater.json)
-                  SIG_WIN_X86=$(jq -r '.platforms["windows-i686"].signature'   dist/tvault-client_i686-pc-windows-msvc/**/updater.json)
+                  MAC_ARM_JSON=$(pick 'aarch64-apple-darwin' 'updater.json');         req "$MAC_ARM_JSON"
+                  MAC_X64_JSON=$(pick 'x86_64-apple-darwin' 'updater.json');          req "$MAC_X64_JSON"
+                  WIN_X64_JSON=$(pick 'x86_64-pc-windows-msvc' 'updater.json');       req "$WIN_X64_JSON"
+                  WIN_X86_JSON=$(pick 'i686-pc-windows-msvc' 'updater.json');         req "$WIN_X86_JSON"
 
+                  SIG_MAC_ARM=$(jq -r '.platforms["darwin-aarch64"].signature' "$MAC_ARM_JSON")
+                  SIG_MAC_X64=$(jq -r '.platforms["darwin-x86_64"].signature' "$MAC_X64_JSON")
+                  SIG_WIN_X64=$(jq -r '.platforms["windows-x86_64"].signature' "$WIN_X64_JSON")
+                  SIG_WIN_X86=$(jq -r '.platforms["windows-i686"].signature'   "$WIN_X86_JSON")
+
+                  # ---- build updater.json ----
                   cat > release/updater.json << EOF
                   {
                     "version": "${VERSION_NO_V}",
@@ -182,6 +187,7 @@ jobs:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Commit updated updater.json
+              shell: bash
               run: |
                   if [ -f release/updater.json ]; then
                     mkdir -p public
