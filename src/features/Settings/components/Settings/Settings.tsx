@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +7,7 @@ import { RouteTypes } from "interfaces";
 import { appChangeLocale } from "features/App/state/App.actions";
 import { selectAppLocale } from "features/App/state/App.selectors";
 import { LocalizationTypes } from "features/Localization/Localization.model";
+import { useUpdater } from "features/Settings/hooks";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UIInput, UISectionHeading, UISelect } from "features/UI";
 import {
@@ -24,10 +25,29 @@ const Settings = () => {
 	const containersPath = useSelector(selectVaultContainersPath);
 	const language = useSelector(selectAppLocale);
 
+	const {
+		isChecking,
+		isDownloading,
+		isInstalling,
+		currentVersion,
+		latestVersion,
+		updateAvailable,
+		updateDownloaded,
+		error,
+		initializeVersion,
+		checkForUpdates,
+		downloadUpdate,
+		installUpdate,
+	} = useUpdater();
+
 	const languageOptions = [
 		{ value: LocalizationTypes.Russian, label: "Русский" },
 		{ value: LocalizationTypes.English, label: "English" },
 	];
+
+	useEffect(() => {
+		initializeVersion();
+	}, [initializeVersion]);
 
 	const pickFolder = useCallback(async () => {
 		const dir = await open({ directory: true, multiple: false });
@@ -43,6 +63,18 @@ const Settings = () => {
 		},
 		[dispatch],
 	);
+
+	const handleCheckUpdates = useCallback(async () => {
+		await checkForUpdates();
+	}, [checkForUpdates]);
+
+	const handleDownloadUpdate = useCallback(async () => {
+		await downloadUpdate();
+	}, [downloadUpdate]);
+
+	const handleInstallUpdate = useCallback(async () => {
+		await installUpdate();
+	}, [installUpdate]);
 
 	return (
 		<section>
@@ -85,6 +117,108 @@ const Settings = () => {
 						})}
 						style={{ maxWidth: "50%" }}
 					/>
+				</div>
+				<div className="flex flex-col gap-[10px]">
+					<p className="text-[20px] text-white text-medium">
+						{formatMessage({ id: "settings.updates" })}:
+					</p>
+					<div className="flex flex-col gap-[10px]">
+						<div className="flex items-center gap-[10px]">
+							<span className="text-white/70">
+								{formatMessage({
+									id: "settings.currentVersion",
+								})}
+								: {currentVersion}
+							</span>
+						</div>
+						{latestVersion && (
+							<div className="flex items-center gap-[10px]">
+								<span className="text-white/70">
+									{formatMessage({
+										id: "settings.latestVersion",
+									})}
+									: {latestVersion}
+								</span>
+							</div>
+						)}
+						{error && (
+							<div className="text-red-400 text-sm">{error}</div>
+						)}
+						<div className="flex items-center gap-[10px]">
+							<UIButton
+								icon={icons.refresh}
+								text={formatMessage({
+									id: "settings.checkUpdates",
+								})}
+								onClick={handleCheckUpdates}
+								disabled={
+									isChecking || isDownloading || isInstalling
+								}
+								style={{ width: "fit-content" }}
+							/>
+							{updateAvailable && !updateDownloaded && (
+								<UIButton
+									icon={icons.download}
+									text={formatMessage({
+										id: "settings.downloadingUpdate",
+									})}
+									onClick={handleDownloadUpdate}
+									disabled={isDownloading || isInstalling}
+									style={{ width: "fit-content" }}
+								/>
+							)}
+							{updateDownloaded && (
+								<UIButton
+									icon={icons.refresh}
+									text={formatMessage({
+										id: "settings.restartToUpdate",
+									})}
+									onClick={handleInstallUpdate}
+									disabled={isInstalling}
+									style={{ width: "fit-content" }}
+								/>
+							)}
+						</div>
+						{isChecking && (
+							<div className="text-blue-400 text-sm">
+								{formatMessage({ id: "settings.checkUpdates" })}
+								...
+							</div>
+						)}
+						{isDownloading && (
+							<div className="text-blue-400 text-sm">
+								{formatMessage({
+									id: "settings.downloadingUpdate",
+								})}
+								...
+							</div>
+						)}
+						{isInstalling && (
+							<div className="text-blue-400 text-sm">
+								{formatMessage({
+									id: "settings.installingUpdate",
+								})}
+								...
+							</div>
+						)}
+						{updateAvailable &&
+							!isChecking &&
+							!isDownloading &&
+							!isInstalling && (
+								<div className="text-green-400 text-sm">
+									{formatMessage({
+										id: "settings.updateAvailable",
+									})}
+								</div>
+							)}
+						{!updateAvailable && !isChecking && currentVersion && (
+							<div className="text-gray-400 text-sm">
+								{formatMessage({
+									id: "settings.updateNotAvailable",
+								})}
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 			<div className="flex items-center gap-[10px] mt-[20px]">

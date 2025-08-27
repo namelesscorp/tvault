@@ -28,3 +28,4 @@ build
 *.out
 
 mac_*.sh
+scripts/

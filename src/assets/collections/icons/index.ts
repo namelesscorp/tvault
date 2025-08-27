@@ -4,6 +4,7 @@ import back from "./back.svg";
 import check from "./check.svg";
 import close from "./close.svg";
 import copy from "./copy.svg";
+import download from "./download.svg";
 import eye from "./eye.svg";
 import eye_off from "./eye_off.svg";
 import folder from "./folder.svg";
@@ -13,6 +14,7 @@ import help_circle from "./help_circle.svg";
 import lock from "./lock.svg";
 import minus from "./minus.svg";
 import pencil from "./pencil.svg";
+import refresh from "./refresh.svg";
 import save from "./save.svg";
 import settings from "./settings.svg";
 import unlock from "./unlock.svg";
@@ -36,6 +38,8 @@ const icons = {
 	check,
 	pencil,
 	save,
+	refresh,
+	download,
 };
 
 export { icons };

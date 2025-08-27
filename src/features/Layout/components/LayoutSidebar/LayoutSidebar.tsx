@@ -40,7 +40,7 @@ const LayoutSidebar = () => {
 	);
 
 	return (
-		<aside className="flex flex-col justify-between w-[280px] h-full p-[20px] bg-white/5 border-r border-white/10">
+		<aside className="w-[200px] min-w-[200px] flex flex-col justify-between bg-black/10 border-r border-white/10 p-[10px]">
 			<nav className="flex flex-col gap-[10px]">
 				{navItems.map(({ to, label, icon, isActive, onClick }) =>
 					onClick ? (

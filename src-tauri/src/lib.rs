@@ -4,6 +4,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_single_instance;
 use tauri_plugin_fs;
 use tauri_plugin_store;
+use tauri_plugin_updater;
 mod cli_runner;
 
 use cli_runner::{run_encrypt, run_decrypt, run_container_info, run_reseal, container_info_once}; 
@@ -111,6 +112,11 @@ pub fn run() {
             bring_to_front(app);
         }))
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            #[cfg(desktop)]
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             entropy_batch,
             check_container_path,

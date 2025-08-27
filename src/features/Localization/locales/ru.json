@@ -177,5 +177,17 @@
 	"settings.title": "Настройки",
 	"settings.containersPath": "Общий путь до контейнеров",
 	"settings.language": "Язык",
-	"settings.selectLanguage": "Выберите язык"
+	"settings.selectLanguage": "Выберите язык",
+	"settings.updates": "Обновления",
+	"settings.checkUpdates": "Проверить обновления",
+	"settings.currentVersion": "Текущая версия",
+	"settings.latestVersion": "Последняя версия",
+	"settings.updateAvailable": "Доступно обновление",
+	"settings.updateNotAvailable": "Обновлений нет",
+	"settings.downloadingUpdate": "Загрузка обновления...",
+	"settings.installingUpdate": "Установка обновления...",
+	"settings.updateDownloaded": "Обновление загружено",
+	"settings.restartToUpdate": "Перезапустить для обновления",
+	"settings.updateError": "Ошибка обновления",
+	"settings.updateSuccess": "Обновление успешно установлено"
 }

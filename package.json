@@ -1,7 +1,7 @@
 {
   "name": "tvault-client",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.0-beta",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,16 +13,27 @@
     "build": "yarn build:dev",
     "build:dev": "tsc && vite build --mode development",
     "build:prod": "tsc && vite build --mode production",
-    "tauri:build": "yarn tauri build"
+    "tauri:build": "yarn tauri build",
+    "build:all": "yarn build:mac-arm && yarn build:mac-intel && yarn build:win-32 && yarn build:win-64",
+    "build:mac-arm": "yarn tauri build --target aarch64-apple-darwin",
+    "build:mac-intel": "yarn tauri build --target x86_64-apple-darwin",
+    "build:win-32": "yarn tauri build --target i686-pc-windows-msvc",
+    "build:win-64": "yarn tauri build --target x86_64-pc-windows-msvc",
+    "build:mac": "yarn build:mac-arm && yarn build:mac-intel",
+    "build:win": "yarn build:win-32 && yarn build:win-64",
+    "release:tag": "git tag v$(node -p \"require('./package.json').version\") && git push --tags"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
     "@tailwindcss/vite": "^4.1.8",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-app": "^2.0.0-alpha.1",
     "@tauri-apps/plugin-dialog": "~2",
     "@tauri-apps/plugin-fs": "^2.4.0",
     "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-process": "^2.3.0",
     "@tauri-apps/plugin-store": "^2",
+    "@tauri-apps/plugin-updater": "^2.9.0",
     "clsx": "^2.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

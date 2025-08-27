@@ -177,5 +177,17 @@
 	"settings.title": "Settings",
 	"settings.containersPath": "Common containers path",
 	"settings.language": "Language",
-	"settings.selectLanguage": "Choose language"
+	"settings.selectLanguage": "Choose language",
+	"settings.updates": "Updates",
+	"settings.checkUpdates": "Check for updates",
+	"settings.currentVersion": "Current version",
+	"settings.latestVersion": "Latest version",
+	"settings.updateAvailable": "Update available",
+	"settings.updateNotAvailable": "No updates available",
+	"settings.downloadingUpdate": "Downloading update...",
+	"settings.installingUpdate": "Installing update...",
+	"settings.updateDownloaded": "Update downloaded",
+	"settings.restartToUpdate": "Restart to update",
+	"settings.updateError": "Update error",
+	"settings.updateSuccess": "Update installed successfully"
 }

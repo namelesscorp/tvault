@@ -9,6 +9,7 @@
 		"fs:default",
 		"dialog:default",
 		"store:default",
+		"updater:default",
 		"core:window:allow-minimize",
 		"core:window:allow-show",
 		"core:window:allow-close",

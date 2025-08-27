@@ -1,7 +1,7 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
 	"productName": "Trust Vault",
-	"version": "0.1.0",
+	"version": "0.1.0-beta",
 	"identifier": "tech.nldev.tvault-client",
 	"build": {
 		"beforeDevCommand": "yarn dev",
@@ -29,6 +29,7 @@
 	"bundle": {
 		"active": true,
 		"targets": "all",
+		"createUpdaterArtifacts": true,
 		"icon": [
 			"icons/32x32.png",
 			"icons/128x128.png",
@@ -44,6 +45,14 @@
 		},
 		"windows": {
 			"webviewInstallMode": { "type": "downloadBootstrapper" }
+		}
+	},
+	"plugins": {
+		"updater": {
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM4RUM5OEYyOUZCM0U1MDcKUldRSDViT2Y4cGpzeUdydTR3d3J0Rmw0MThrM01URkhtRGJlRGxDeG9zNExWWXk5R1N3b0htUXIK",
+			"endpoints": [
+				"https://raw.githubusercontent.com/namelesscorp/tvault/master/public/updater.json"
+			]
 		}
 	}
 }
