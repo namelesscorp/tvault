@@ -107,26 +107,29 @@ jobs:
               with:
                   path: dist
 
-            - name: Collect & rename release assets
+            - name: Collect & rename release assets (safe)
               shell: bash
               run: |
                   set -euo pipefail
-                  shopt -s globstar nullglob
 
-                  VERSION_TAG="${GITHUB_REF_NAME}"      # v0.1.0-beta
-                  VERSION_NO_V="${VERSION_TAG#v}"       # 0.1.0-beta
+                  VERSION_TAG="${GITHUB_REF_NAME}"
+                  VERSION_NO_V="${VERSION_TAG#v}"
+                  URL_BASE="https://github.com/${{ github.repository }}/releases/download/${VERSION_TAG}"
 
-                  # Находим реальные файлы из каждого раннера
-                  MAC_ARM_DMG=$(ls dist/tvault-client_aarch64-apple-darwin/**/bundle/dmg/*.dmg | head -n 1)
-                  MAC_X64_DMG=$(ls dist/tvault-client_x86_64-apple-darwin/**/bundle/dmg/*.dmg   | head -n 1)
-                  MAC_ARM_TGZ=$(ls dist/tvault-client_aarch64-apple-darwin/**/bundle/macos/*.app.tar.gz | head -n 1)
-                  MAC_X64_TGZ=$(ls dist/tvault-client_x86_64-apple-darwin/**/bundle/macos/*.app.tar.gz   | head -n 1)
-                  WIN_X64_EXE=$(ls dist/tvault-client_x86_64-pc-windows-msvc/**/bundle/nsis/*.exe | head -n 1)
-                  WIN_X86_EXE=$(ls dist/tvault-client_i686-pc-windows-msvc/**/bundle/nsis/*.exe   | head -n 1)
+                  f_first() { find dist -type f -path "$1" -print -quit; }
+
+                  MAC_ARM_DMG="$(f_first '*/tvault-client_aarch64-apple-darwin/*/bundle/dmg/*.dmg')"
+                  MAC_X64_DMG="$(f_first '*/tvault-client_x86_64-apple-darwin/*/bundle/dmg/*.dmg')"
+                  MAC_ARM_TGZ="$(f_first '*/tvault-client_aarch64-apple-darwin/*/bundle/macos/*.app.tar.gz')"
+                  MAC_X64_TGZ="$(f_first '*/tvault-client_x86_64-apple-darwin/*/bundle/macos/*.app.tar.gz')"
+                  WIN_X64_EXE="$(f_first '*/tvault-client_x86_64-pc-windows-msvc/*/bundle/nsis/*.exe')"
+                  WIN_X86_EXE="$(f_first '*/tvault-client_i686-pc-windows-msvc/*/bundle/nsis/*.exe')"
+
+                  for f in "$MAC_ARM_DMG" "$MAC_X64_DMG" "$MAC_ARM_TGZ" "$MAC_X64_TGZ" "$WIN_X64_EXE" "$WIN_X86_EXE"; do
+                    [ -f "$f" ] || { echo "Not found: $f"; exit 1; }
+                  done
 
                   mkdir -p release
-
-                  # Переименовываем так, чтобы имена были уникальными
                   cp "$MAC_ARM_DMG" "release/TrustVault_${VERSION_NO_V}_aarch64.dmg"
                   cp "$MAC_X64_DMG" "release/TrustVault_${VERSION_NO_V}_x64.dmg"
                   cp "$MAC_ARM_TGZ" "release/TrustVault_${VERSION_NO_V}_aarch64.app.tar.gz"
@@ -134,26 +137,18 @@ jobs:
                   cp "$WIN_X64_EXE" "release/TrustVault_${VERSION_NO_V}_x64-setup.exe"
                   cp "$WIN_X86_EXE" "release/TrustVault_${VERSION_NO_V}_x86-setup.exe"
 
-            - name: Build updater.json (from curated assets)
-              shell: bash
-              run: |
-                  set -euo pipefail
-                  sudo apt-get update >/dev/null && sudo apt-get install -y jq >/dev/null
+                  MAC_ARM_JSON="$(f_first '*/tvault-client_aarch64-apple-darwin/*/updater.json')"
+                  MAC_X64_JSON="$(f_first '*/tvault-client_x86_64-apple-darwin/*/updater.json')"
+                  WIN_X64_JSON="$(f_first '*/tvault-client_x86_64-pc-windows-msvc/*/updater.json')"
+                  WIN_X86_JSON="$(f_first '*/tvault-client_i686-pc-windows-msvc/*/updater.json')"
 
-                  VERSION_TAG="${GITHUB_REF_NAME}"      # v0.1.0-beta
-                  VERSION_NO_V="${VERSION_TAG#v}"       # 0.1.0-beta
-                  URL_BASE="https://github.com/${{ github.repository }}/releases/download/${VERSION_TAG}"
+                  sudo apt-get update -y >/dev/null
+                  sudo apt-get install -y jq >/dev/null
 
-                  # Подписи берём из тауриевских updater.json из артефактов
-                  MAC_ARM_JSON=$(ls dist/tvault-client_aarch64-apple-darwin/**/updater.json | head -n 1)
-                  MAC_X64_JSON=$(ls dist/tvault-client_x86_64-apple-darwin/**/updater.json   | head -n 1)
-                  WIN_X64_JSON=$(ls dist/tvault-client_x86_64-pc-windows-msvc/**/updater.json | head -n 1)
-                  WIN_X86_JSON=$(ls dist/tvault-client_i686-pc-windows-msvc/**/updater.json   | head -n 1)
-
-                  SIG_MAC_ARM=$(jq -r '.platforms["darwin-aarch64"].signature' "$MAC_ARM_JSON")
-                  SIG_MAC_X64=$(jq -r '.platforms["darwin-x86_64"].signature' "$MAC_X64_JSON")
-                  SIG_WIN_X64=$(jq -r '.platforms["windows-x86_64"].signature' "$WIN_X64_JSON")
-                  SIG_WIN_X86=$(jq -r '.platforms["windows-i686"].signature'   "$WIN_X86_JSON")
+                  SIG_MAC_ARM="$(jq -r '.platforms["darwin-aarch64"].signature' "$MAC_ARM_JSON")"
+                  SIG_MAC_X64="$(jq -r '.platforms["darwin-x86_64"].signature' "$MAC_X64_JSON")"
+                  SIG_WIN_X64="$(jq -r '.platforms["windows-x86_64"].signature' "$WIN_X64_JSON")"
+                  SIG_WIN_X86="$(jq -r '.platforms["windows-i686"].signature'   "$WIN_X86_JSON")"
 
                   cat > release/updater.json << EOF
                   {
@@ -181,7 +176,7 @@ jobs:
                   }
                   EOF
 
-            - name: Create GitHub Release (curated)
+            - name: Create GitHub Release (curated only)
               uses: softprops/action-gh-release@v2
               with:
                   files: release/*
