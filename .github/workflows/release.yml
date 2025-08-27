@@ -112,38 +112,44 @@ jobs:
                   echo "== DIST CONTENTS =="
                   find dist -maxdepth 4 -type f || true
 
-            - name: Prepare release files
+            - name: Prepare release files (DMG + app.tar.gz + EXE)
               run: |
+                  set -e
+
                   VERSION_TAG="${GITHUB_REF_NAME}"
                   VERSION_NO_V="${VERSION_TAG#v}"
                   URL_BASE="https://github.com/${{ github.repository }}/releases/download/${VERSION_TAG}"
 
                   mkdir -p release
 
-                  # Mac ARM
-                  MAC_ARM_TGZ=$(find dist -name '*.app.tar.gz' | grep 'aarch64' | head -n1)
+                  # --- macOS ARM ---
+                  MAC_ARM_DMG=$(find dist -type f -path '*/dmg/*.dmg'         | grep 'aarch64-apple-darwin' | head -n1)
+                  MAC_ARM_TGZ=$(find dist -type f -path '*/macos/*.app.tar.gz'| grep 'aarch64-apple-darwin' | head -n1)
+                  cp "$MAC_ARM_DMG" "release/TrustVault_${VERSION_NO_V}_aarch64.dmg"
                   cp "$MAC_ARM_TGZ" "release/TrustVault_${VERSION_NO_V}_aarch64.app.tar.gz"
 
-                  # Mac x64
-                  MAC_X64_TGZ=$(find dist -name '*.app.tar.gz' | grep 'x86_64' | head -n1)
+                  # --- macOS x64 ---
+                  MAC_X64_DMG=$(find dist -type f -path '*/dmg/*.dmg'         | grep 'x86_64-apple-darwin'  | head -n1)
+                  MAC_X64_TGZ=$(find dist -type f -path '*/macos/*.app.tar.gz'| grep 'x86_64-apple-darwin'  | head -n1)
+                  cp "$MAC_X64_DMG" "release/TrustVault_${VERSION_NO_V}_x64.dmg"
                   cp "$MAC_X64_TGZ" "release/TrustVault_${VERSION_NO_V}_x64.app.tar.gz"
 
-                  # Windows x64
-                  WIN_X64_EXE=$(find dist -name '*.exe' | grep 'x86_64' | head -n1)
+                  # --- Windows x64 ---
+                  WIN_X64_EXE=$(find dist -type f -name '*.exe' | grep 'x86_64-pc-windows-msvc' | head -n1)
                   cp "$WIN_X64_EXE" "release/TrustVault_${VERSION_NO_V}_x64-setup.exe"
 
-                  # Windows x86
-                  WIN_X86_EXE=$(find dist -name '*.exe' | grep 'i686' | head -n1)
+                  # --- Windows x86 ---
+                  WIN_X86_EXE=$(find dist -type f -name '*.exe' | grep 'i686-pc-windows-msvc'   | head -n1)
                   cp "$WIN_X86_EXE" "release/TrustVault_${VERSION_NO_V}_x86-setup.exe"
 
-                  # Signatures
-                  sudo apt-get update -y
-                  sudo apt-get install -y jq
+                  # signatures
+                  sudo apt-get update -y >/dev/null
+                  sudo apt-get install -y jq >/dev/null
 
-                  SIG_MAC_ARM=$(jq -r '.platforms["darwin-aarch64"].signature' $(find dist -name updater.json | grep 'aarch64' | head -n1))
-                  SIG_MAC_X64=$(jq -r '.platforms["darwin-x86_64"].signature' $(find dist -name updater.json | grep 'x86_64-apple' | head -n1))
-                  SIG_WIN_X64=$(jq -r '.platforms["windows-x86_64"].signature' $(find dist -name updater.json | grep 'x86_64-pc-windows' | head -n1))
-                  SIG_WIN_X86=$(jq -r '.platforms["windows-i686"].signature' $(find dist -name updater.json | grep 'i686' | head -n1))
+                  SIG_MAC_ARM=$(jq -r '.platforms["darwin-aarch64"].signature'   $(find dist -type f -name 'updater.json' | grep 'aarch64-apple-darwin'       | head -n1))
+                  SIG_MAC_X64=$(jq -r '.platforms["darwin-x86_64"].signature'    $(find dist -type f -name 'updater.json' | grep 'x86_64-apple-darwin'        | head -n1))
+                  SIG_WIN_X64=$(jq -r '.platforms["windows-x86_64"].signature'   $(find dist -type f -name 'updater.json' | grep 'x86_64-pc-windows-msvc'     | head -n1))
+                  SIG_WIN_X86=$(jq -r '.platforms["windows-i686"].signature'     $(find dist -type f -name 'updater.json' | grep 'i686-pc-windows-msvc'       | head -n1))
 
                   cat > release/updater.json << EOF
                   {
@@ -171,7 +177,7 @@ jobs:
                   }
                   EOF
 
-            - name: Create GitHub Release
+            - name: Create GitHub Release (only curated files)
               uses: softprops/action-gh-release@v2
               with:
                   files: release/*
@@ -180,8 +186,10 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Commit updated updater.json
-              shell: bash
+            - name: Checkout repo (for committing updater.json)
+              uses: actions/checkout@v4
+
+            - name: Commit updated updater.json to repo
               run: |
                   if [ -f release/updater.json ]; then
                     mkdir -p public
