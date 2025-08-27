@@ -107,57 +107,88 @@ jobs:
               with:
                   path: dist
 
-            - name: Create GitHub Release
-              uses: softprops/action-gh-release@v2
-              with:
-                  files: |
-                      dist/**/*
-                  draft: false
-                  prerelease: ${{ contains(github.ref_name, '-') }}
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-            - name: Build updater.json
+            - name: Collect & rename release assets
+              shell: bash
               run: |
-                  sudo apt-get update && sudo apt-get install -y jq
-                  VERSION=${GITHUB_REF#refs/tags/}
+                  set -euo pipefail
+                  shopt -s globstar nullglob
 
-                  MAC_ARM_JSON="dist/tvault-client_aarch64-apple-darwin/**/updater.json"
-                  MAC_X64_JSON="dist/tvault-client_x86_64-apple-darwin/**/updater.json"
-                  WIN_X64_JSON="dist/tvault-client_x86_64-pc-windows-msvc/**/updater.json"
-                  WIN_X86_JSON="dist/tvault-client_i686-pc-windows-msvc/**/updater.json"
+                  VERSION_TAG="${GITHUB_REF_NAME}"      # v0.1.0-beta
+                  VERSION_NO_V="${VERSION_TAG#v}"       # 0.1.0-beta
 
-                  SIG_MAC_ARM=$(cat $(ls $MAC_ARM_JSON) | jq -r '.platforms["darwin-aarch64"].signature')
-                  SIG_MAC_X64=$(cat $(ls $MAC_X64_JSON) | jq -r '.platforms["darwin-x86_64"].signature')
-                  SIG_WIN_X64=$(cat $(ls $WIN_X64_JSON) | jq -r '.platforms["windows-x86_64"].signature')
-                  SIG_WIN_X86=$(cat $(ls $WIN_X86_JSON) | jq -r '.platforms["windows-i686"].signature')
+                  # Находим реальные файлы из каждого раннера
+                  MAC_ARM_DMG=$(ls dist/tvault-client_aarch64-apple-darwin/**/bundle/dmg/*.dmg | head -n 1)
+                  MAC_X64_DMG=$(ls dist/tvault-client_x86_64-apple-darwin/**/bundle/dmg/*.dmg   | head -n 1)
+                  MAC_ARM_TGZ=$(ls dist/tvault-client_aarch64-apple-darwin/**/bundle/macos/*.app.tar.gz | head -n 1)
+                  MAC_X64_TGZ=$(ls dist/tvault-client_x86_64-apple-darwin/**/bundle/macos/*.app.tar.gz   | head -n 1)
+                  WIN_X64_EXE=$(ls dist/tvault-client_x86_64-pc-windows-msvc/**/bundle/nsis/*.exe | head -n 1)
+                  WIN_X86_EXE=$(ls dist/tvault-client_i686-pc-windows-msvc/**/bundle/nsis/*.exe   | head -n 1)
 
-                  mkdir -p public
-                  cat > public/updater.json << EOF
+                  mkdir -p release
+
+                  # Переименовываем так, чтобы имена были уникальными
+                  cp "$MAC_ARM_DMG" "release/TrustVault_${VERSION_NO_V}_aarch64.dmg"
+                  cp "$MAC_X64_DMG" "release/TrustVault_${VERSION_NO_V}_x64.dmg"
+                  cp "$MAC_ARM_TGZ" "release/TrustVault_${VERSION_NO_V}_aarch64.app.tar.gz"
+                  cp "$MAC_X64_TGZ" "release/TrustVault_${VERSION_NO_V}_x64.app.tar.gz"
+                  cp "$WIN_X64_EXE" "release/TrustVault_${VERSION_NO_V}_x64-setup.exe"
+                  cp "$WIN_X86_EXE" "release/TrustVault_${VERSION_NO_V}_x86-setup.exe"
+
+            - name: Build updater.json (from curated assets)
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  sudo apt-get update >/dev/null && sudo apt-get install -y jq >/dev/null
+
+                  VERSION_TAG="${GITHUB_REF_NAME}"      # v0.1.0-beta
+                  VERSION_NO_V="${VERSION_TAG#v}"       # 0.1.0-beta
+                  URL_BASE="https://github.com/${{ github.repository }}/releases/download/${VERSION_TAG}"
+
+                  # Подписи берём из тауриевских updater.json из артефактов
+                  MAC_ARM_JSON=$(ls dist/tvault-client_aarch64-apple-darwin/**/updater.json | head -n 1)
+                  MAC_X64_JSON=$(ls dist/tvault-client_x86_64-apple-darwin/**/updater.json   | head -n 1)
+                  WIN_X64_JSON=$(ls dist/tvault-client_x86_64-pc-windows-msvc/**/updater.json | head -n 1)
+                  WIN_X86_JSON=$(ls dist/tvault-client_i686-pc-windows-msvc/**/updater.json   | head -n 1)
+
+                  SIG_MAC_ARM=$(jq -r '.platforms["darwin-aarch64"].signature' "$MAC_ARM_JSON")
+                  SIG_MAC_X64=$(jq -r '.platforms["darwin-x86_64"].signature' "$MAC_X64_JSON")
+                  SIG_WIN_X64=$(jq -r '.platforms["windows-x86_64"].signature' "$WIN_X64_JSON")
+                  SIG_WIN_X86=$(jq -r '.platforms["windows-i686"].signature'   "$WIN_X86_JSON")
+
+                  cat > release/updater.json << EOF
                   {
-                    "version": "${VERSION}",
+                    "version": "${VERSION_NO_V}",
                     "notes": "Automatic update",
                     "pub_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
                     "platforms": {
                       "darwin-aarch64": {
                         "signature": "${SIG_MAC_ARM}",
-                        "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/tvault-client_${VERSION}_aarch64-apple-darwin.tar.gz"
+                        "url": "${URL_BASE}/TrustVault_${VERSION_NO_V}_aarch64.app.tar.gz"
                       },
                       "darwin-x86_64": {
                         "signature": "${SIG_MAC_X64}",
-                        "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/tvault-client_${VERSION}_x86_64-apple-darwin.tar.gz"
+                        "url": "${URL_BASE}/TrustVault_${VERSION_NO_V}_x64.app.tar.gz"
                       },
                       "windows-x86_64": {
                         "signature": "${SIG_WIN_X64}",
-                        "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/tvault-client_${VERSION}_x86_64-pc-windows-msvc.exe"
+                        "url": "${URL_BASE}/TrustVault_${VERSION_NO_V}_x64-setup.exe"
                       },
                       "windows-i686": {
                         "signature": "${SIG_WIN_X86}",
-                        "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/tvault-client_${VERSION}_i686-pc-windows-msvc.exe"
+                        "url": "${URL_BASE}/TrustVault_${VERSION_NO_V}_x86-setup.exe"
                       }
                     }
                   }
                   EOF
+
+            - name: Create GitHub Release (curated)
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: release/*
+                  draft: false
+                  prerelease: ${{ contains(github.ref_name, '-') }}
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Commit updated updater.json
               run: |
