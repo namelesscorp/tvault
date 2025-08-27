@@ -15,14 +15,17 @@ jobs:
                     - os: macos-14
                       target: aarch64-apple-darwin
                       artifact_name: tvault-client_aarch64-apple-darwin
-                    # - os: macos-14
-                    #   target: x86_64-apple-darwin
-                    #   artifact_name: tvault-client_x86_64-apple-darwin
+                    - os: macos-14
+                      target: x86_64-apple-darwin
+                      artifact_name: tvault-client_x86_64-apple-darwin
 
-                    # Windows x64
+                    # Windows
                     - os: windows-latest
                       target: x86_64-pc-windows-msvc
                       artifact_name: tvault-client_x86_64-pc-windows-msvc
+                    - os: windows-latest
+                      target: i686-pc-windows-msvc
+                      artifact_name: tvault-client_i686-pc-windows-msvc
 
                     # Linux x64
                     # - os: ubuntu-22.04
@@ -61,6 +64,10 @@ jobs:
             - name: Select Xcode
               if: startsWith(matrix.target, 'aarch64-apple-') || startsWith(matrix.target, 'x86_64-apple-')
               run: sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
+
+            - name: Install NSIS
+              if: matrix.os == 'windows-latest'
+              run: choco install nsis -y
 
             - name: Build (macOS signed & notarized)
               if: startsWith(matrix.target, 'aarch64-apple-') || startsWith(matrix.target, 'x86_64-apple-')
@@ -116,13 +123,13 @@ jobs:
 
                   MAC_ARM_JSON="dist/tvault-client_aarch64-apple-darwin/**/updater.json"
                   MAC_X64_JSON="dist/tvault-client_x86_64-apple-darwin/**/updater.json"
-                  LINUX_X64_JSON="dist/tvault-client_x86_64-unknown-linux-gnu/**/updater.json"
                   WIN_X64_JSON="dist/tvault-client_x86_64-pc-windows-msvc/**/updater.json"
+                  WIN_X86_JSON="dist/tvault-client_i686-pc-windows-msvc/**/updater.json"
 
                   SIG_MAC_ARM=$(cat $(ls $MAC_ARM_JSON) | jq -r '.platforms["darwin-aarch64"].signature')
                   SIG_MAC_X64=$(cat $(ls $MAC_X64_JSON) | jq -r '.platforms["darwin-x86_64"].signature')
-                  SIG_LINUX_X64=$(cat $(ls $LINUX_X64_JSON) | jq -r '.platforms["linux-x86_64"].signature')
                   SIG_WIN_X64=$(cat $(ls $WIN_X64_JSON) | jq -r '.platforms["windows-x86_64"].signature')
+                  SIG_WIN_X86=$(cat $(ls $WIN_X86_JSON) | jq -r '.platforms["windows-i686"].signature')
 
                   mkdir -p public
                   cat > public/updater.json << EOF
@@ -139,13 +146,13 @@ jobs:
                         "signature": "${SIG_MAC_X64}",
                         "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/tvault-client_${VERSION}_x86_64-apple-darwin.tar.gz"
                       },
-                      "linux-x86_64": {
-                        "signature": "${SIG_LINUX_X64}",
-                        "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/tvault-client_${VERSION}_x86_64-unknown-linux-gnu.tar.gz"
-                      },
                       "windows-x86_64": {
                         "signature": "${SIG_WIN_X64}",
-                        "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/tvault-client_${VERSION}_x86_64-pc-windows-msvc.msi"
+                        "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/tvault-client_${VERSION}_x86_64-pc-windows-msvc.exe"
+                      },
+                      "windows-i686": {
+                        "signature": "${SIG_WIN_X86}",
+                        "url": "https://github.com/${{ github.repository }}/releases/download/${VERSION}/tvault-client_${VERSION}_i686-pc-windows-msvc.exe"
                       }
                     }
                   }
