@@ -107,48 +107,44 @@ jobs:
               with:
                   path: dist
 
-            - name: Collect & rename release assets (safe)
+            - name: Collect & rename release assets
               shell: bash
               run: |
                   set -euo pipefail
 
-                  VERSION_TAG="${GITHUB_REF_NAME}"
-                  VERSION_NO_V="${VERSION_TAG#v}"
+                  VERSION_TAG="${GITHUB_REF_NAME}"      # v0.1.0-beta
+                  VERSION_NO_V="${VERSION_TAG#v}"       # 0.1.0-beta
                   URL_BASE="https://github.com/${{ github.repository }}/releases/download/${VERSION_TAG}"
 
-                  f_first() { find dist -type f -path "$1" -print -quit; }
-
-                  MAC_ARM_DMG="$(f_first '*/tvault-client_aarch64-apple-darwin/*/bundle/dmg/*.dmg')"
-                  MAC_X64_DMG="$(f_first '*/tvault-client_x86_64-apple-darwin/*/bundle/dmg/*.dmg')"
-                  MAC_ARM_TGZ="$(f_first '*/tvault-client_aarch64-apple-darwin/*/bundle/macos/*.app.tar.gz')"
-                  MAC_X64_TGZ="$(f_first '*/tvault-client_x86_64-apple-darwin/*/bundle/macos/*.app.tar.gz')"
-                  WIN_X64_EXE="$(f_first '*/tvault-client_x86_64-pc-windows-msvc/*/bundle/nsis/*.exe')"
-                  WIN_X86_EXE="$(f_first '*/tvault-client_i686-pc-windows-msvc/*/bundle/nsis/*.exe')"
-
-                  for f in "$MAC_ARM_DMG" "$MAC_X64_DMG" "$MAC_ARM_TGZ" "$MAC_X64_TGZ" "$WIN_X64_EXE" "$WIN_X86_EXE"; do
-                    [ -f "$f" ] || { echo "Not found: $f"; exit 1; }
-                  done
-
                   mkdir -p release
-                  cp "$MAC_ARM_DMG" "release/TrustVault_${VERSION_NO_V}_aarch64.dmg"
-                  cp "$MAC_X64_DMG" "release/TrustVault_${VERSION_NO_V}_x64.dmg"
-                  cp "$MAC_ARM_TGZ" "release/TrustVault_${VERSION_NO_V}_aarch64.app.tar.gz"
-                  cp "$MAC_X64_TGZ" "release/TrustVault_${VERSION_NO_V}_x64.app.tar.gz"
-                  cp "$WIN_X64_EXE" "release/TrustVault_${VERSION_NO_V}_x64-setup.exe"
-                  cp "$WIN_X86_EXE" "release/TrustVault_${VERSION_NO_V}_x86-setup.exe"
 
-                  MAC_ARM_JSON="$(f_first '*/tvault-client_aarch64-apple-darwin/*/updater.json')"
-                  MAC_X64_JSON="$(f_first '*/tvault-client_x86_64-apple-darwin/*/updater.json')"
-                  WIN_X64_JSON="$(f_first '*/tvault-client_x86_64-pc-windows-msvc/*/updater.json')"
-                  WIN_X86_JSON="$(f_first '*/tvault-client_i686-pc-windows-msvc/*/updater.json')"
+                  # macOS ARM
+                  MAC_ARM_DMG=$(find dist -type f -name '*.dmg' | grep 'aarch64-apple-darwin' | head -n 1)
+                  MAC_ARM_TGZ=$(find dist -type f -name '*.app.tar.gz' | grep 'aarch64-apple-darwin' | head -n 1)
+                  cp "$MAC_ARM_DMG" "release/TrustVault_${VERSION_NO_V}_aarch64.dmg"
+                  cp "$MAC_ARM_TGZ" "release/TrustVault_${VERSION_NO_V}_aarch64.app.tar.gz"
+
+                  # macOS x64
+                  MAC_X64_DMG=$(find dist -type f -name '*.dmg' | grep 'x86_64-apple-darwin' | head -n 1)
+                  MAC_X64_TGZ=$(find dist -type f -name '*.app.tar.gz' | grep 'x86_64-apple-darwin' | head -n 1)
+                  cp "$MAC_X64_DMG" "release/TrustVault_${VERSION_NO_V}_x64.dmg"
+                  cp "$MAC_X64_TGZ" "release/TrustVault_${VERSION_NO_V}_x64.app.tar.gz"
+
+                  # Windows x64
+                  WIN_X64_EXE=$(find dist -type f -name '*.exe' | grep 'x86_64-pc-windows-msvc' | head -n 1)
+                  cp "$WIN_X64_EXE" "release/TrustVault_${VERSION_NO_V}_x64-setup.exe"
+
+                  # Windows x86
+                  WIN_X86_EXE=$(find dist -type f -name '*.exe' | grep 'i686-pc-windows-msvc' | head -n 1)
+                  cp "$WIN_X86_EXE" "release/TrustVault_${VERSION_NO_V}_x86-setup.exe"
 
                   sudo apt-get update -y >/dev/null
                   sudo apt-get install -y jq >/dev/null
 
-                  SIG_MAC_ARM="$(jq -r '.platforms["darwin-aarch64"].signature' "$MAC_ARM_JSON")"
-                  SIG_MAC_X64="$(jq -r '.platforms["darwin-x86_64"].signature' "$MAC_X64_JSON")"
-                  SIG_WIN_X64="$(jq -r '.platforms["windows-x86_64"].signature' "$WIN_X64_JSON")"
-                  SIG_WIN_X86="$(jq -r '.platforms["windows-i686"].signature'   "$WIN_X86_JSON")"
+                  SIG_MAC_ARM=$(jq -r '.platforms["darwin-aarch64"].signature' dist/tvault-client_aarch64-apple-darwin/**/updater.json)
+                  SIG_MAC_X64=$(jq -r '.platforms["darwin-x86_64"].signature' dist/tvault-client_x86_64-apple-darwin/**/updater.json)
+                  SIG_WIN_X64=$(jq -r '.platforms["windows-x86_64"].signature' dist/tvault-client_x86_64-pc-windows-msvc/**/updater.json)
+                  SIG_WIN_X86=$(jq -r '.platforms["windows-i686"].signature'   dist/tvault-client_i686-pc-windows-msvc/**/updater.json)
 
                   cat > release/updater.json << EOF
                   {
@@ -187,7 +183,9 @@ jobs:
 
             - name: Commit updated updater.json
               run: |
-                  if [ -f public/updater.json ]; then
+                  if [ -f release/updater.json ]; then
+                    mkdir -p public
+                    cp release/updater.json public/updater.json
                     git config --local user.email "action@github.com"
                     git config --local user.name "GitHub Action"
                     git pull --rebase
