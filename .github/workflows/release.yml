@@ -116,57 +116,16 @@ jobs:
               with:
                   path: dist
 
-            - name: Inspect artifacts & show updater.jsons
+            - name: Show artifact tree (debug)
               shell: bash
               run: |
                   echo "== DIST CONTENTS =="
-                  find dist -maxdepth 5 -type f || true
+                  find dist -maxdepth 6 -type f | sed 's/^/  /' || true
 
-                  echo ""
-                  echo "== TAURI updater.json files =="
-                  mapfile -t UPS < <(find dist -type f -name 'updater.json' | sort)
-                  if [ ${#UPS[@]} -eq 0 ]; then
-                    echo "❌ No updater.json files found"; exit 1
-                  fi
-                  for f in "${UPS[@]}"; do
-                    echo "--- $f ---"
-                    cat "$f"
-                    echo ""
-                  done
-
-            - name: Extract & validate signatures
+            - name: Build updater.json from .sig and prepare curated assets
               shell: bash
               run: |
                   set -euo pipefail
-                  sudo apt-get update -y >/dev/null
-                  sudo apt-get install -y jq >/dev/null
-
-                  pick_sig () {
-                    local platform="$1"
-                    local pattern="$2"
-                    local file
-                    file="$(find dist -type f -name 'updater.json' | grep -F "$pattern" | head -n1 || true)"
-                    if [ -z "${file:-}" ]; then
-                      echo "❌ updater.json for $platform not found (pattern: $pattern)"; exit 1
-                    fi
-                    local sig
-                    sig="$(jq -r ".platforms[\"$platform\"].signature // empty" "$file")"
-                    local len=${#sig}
-                    echo "Platform=$platform | file=$file | signature_length=$len"
-                    if [ -z "$sig" ]; then
-                      echo "❌ EMPTY signature for $platform (check TAURI_SIGNING_PRIVATE_KEY / PASSWORD and pubkey)"; exit 1
-                    fi
-                    # echo "$sig" # <- если нужно увидеть саму подпись (обычно не нужно)
-                  }
-
-                  pick_sig "darwin-aarch64"   "aarch64-apple-darwin"
-                  pick_sig "darwin-x86_64"    "x86_64-apple-darwin"
-                  pick_sig "windows-x86_64"   "x86_64-pc-windows-msvc"
-                  pick_sig "windows-i686"     "i686-pc-windows-msvc"
-
-            - name: Prepare release files (DMG + app.tar.gz + EXE)
-              run: |
-                  set -e
 
                   VERSION_TAG="${GITHUB_REF_NAME}"
                   VERSION_NO_V="${VERSION_TAG#v}"
@@ -174,35 +133,63 @@ jobs:
 
                   mkdir -p release
 
-                  # --- macOS ARM ---
-                  MAC_ARM_DMG=$(find dist -type f -path '*/dmg/*.dmg'         | grep 'aarch64-apple-darwin' | head -n1)
-                  MAC_ARM_TGZ=$(find dist -type f -path '*/macos/*.app.tar.gz'| grep 'aarch64-apple-darwin' | head -n1)
-                  cp "$MAC_ARM_DMG" "release/TrustVault_${VERSION_NO_V}_aarch64.dmg"
+                  # --- locate macOS files ---
+                  MAC_ARM_DMG=$(find dist -type f -path '*/dmg/*.dmg'          | grep -F 'aarch64-apple-darwin' | head -n1 || true)
+                  MAC_X64_DMG=$(find dist -type f -path '*/dmg/*.dmg'          | grep -F 'x86_64-apple-darwin'  | head -n1 || true)
+                  MAC_ARM_TGZ=$(find dist -type f -path '*/macos/*.app.tar.gz' | grep -F 'aarch64-apple-darwin' | head -n1)
+                  MAC_X64_TGZ=$(find dist -type f -path '*/macos/*.app.tar.gz' | grep -F 'x86_64-apple-darwin'  | head -n1)
+                  MAC_ARM_SIG="${MAC_ARM_TGZ}.sig"
+                  MAC_X64_SIG="${MAC_X64_TGZ}.sig"
+
+                  # --- locate Windows files ---
+                  WIN_X64_EXE=$(find dist -type f -path '*/nsis/*.exe' | grep -F 'x86_64-pc-windows-msvc' | head -n1)
+                  WIN_X86_EXE=$(find dist -type f -path '*/nsis/*.exe' | grep -F 'i686-pc-windows-msvc'   | head -n1)
+                  WIN_X64_SIG="${WIN_X64_EXE}.sig"
+                  WIN_X86_SIG="${WIN_X86_EXE}.sig"
+
+                  # --- required files must exist ---
+                  for f in \
+                    "$MAC_ARM_TGZ" "$MAC_X64_TGZ" \
+                    "$MAC_ARM_SIG" "$MAC_X64_SIG" \
+                    "$WIN_X64_EXE" "$WIN_X86_EXE" \
+                    "$WIN_X64_SIG" "$WIN_X86_SIG"
+                  do
+                    if [ ! -f "$f" ]; then echo "❌ Not found: $f"; exit 1; fi
+                  done
+
+                  if [ -n "${MAC_ARM_DMG:-}" ] && [ -f "$MAC_ARM_DMG" ]; then
+                    cp "$MAC_ARM_DMG" "release/TrustVault_${VERSION_NO_V}_aarch64.dmg"
+                  fi
+                  if [ -n "${MAC_X64_DMG:-}" ] && [ -f "$MAC_X64_DMG" ]; then
+                    cp "$MAC_X64_DMG" "release/TrustVault_${VERSION_NO_V}_x64.dmg"
+                  fi
+
+                  # --- copy curated install/update payloads ---
                   cp "$MAC_ARM_TGZ" "release/TrustVault_${VERSION_NO_V}_aarch64.app.tar.gz"
-
-                  # --- macOS x64 ---
-                  MAC_X64_DMG=$(find dist -type f -path '*/dmg/*.dmg'         | grep 'x86_64-apple-darwin'  | head -n1)
-                  MAC_X64_TGZ=$(find dist -type f -path '*/macos/*.app.tar.gz'| grep 'x86_64-apple-darwin'  | head -n1)
-                  cp "$MAC_X64_DMG" "release/TrustVault_${VERSION_NO_V}_x64.dmg"
                   cp "$MAC_X64_TGZ" "release/TrustVault_${VERSION_NO_V}_x64.app.tar.gz"
-
-                  # --- Windows x64 ---
-                  WIN_X64_EXE=$(find dist -type f -name '*.exe' | grep 'x86_64-pc-windows-msvc' | head -n1)
                   cp "$WIN_X64_EXE" "release/TrustVault_${VERSION_NO_V}_x64-setup.exe"
-
-                  # --- Windows x86 ---
-                  WIN_X86_EXE=$(find dist -type f -name '*.exe' | grep 'i686-pc-windows-msvc'   | head -n1)
                   cp "$WIN_X86_EXE" "release/TrustVault_${VERSION_NO_V}_x86-setup.exe"
 
-                  # signatures
-                  sudo apt-get update -y >/dev/null
-                  sudo apt-get install -y jq >/dev/null
+                  # --- read signatures from .sig files ---
+                  read_trim () { tr -d '\r\n' < "$1" | xargs echo -n; } # trim CR/LF + spaces
+                  SIG_MAC_ARM="$(read_trim "$MAC_ARM_SIG")"
+                  SIG_MAC_X64="$(read_trim "$MAC_X64_SIG")"
+                  SIG_WIN_X64="$(read_trim "$WIN_X64_SIG")"
+                  SIG_WIN_X86="$(read_trim "$WIN_X86_SIG")"
 
-                  SIG_MAC_ARM=$(jq -r '.platforms["darwin-aarch64"].signature'   $(find dist -type f -name 'updater.json' | grep 'aarch64-apple-darwin'       | head -n1))
-                  SIG_MAC_X64=$(jq -r '.platforms["darwin-x86_64"].signature'    $(find dist -type f -name 'updater.json' | grep 'x86_64-apple-darwin'        | head -n1))
-                  SIG_WIN_X64=$(jq -r '.platforms["windows-x86_64"].signature'   $(find dist -type f -name 'updater.json' | grep 'x86_64-pc-windows-msvc'     | head -n1))
-                  SIG_WIN_X86=$(jq -r '.platforms["windows-i686"].signature'     $(find dist -type f -name 'updater.json' | grep 'i686-pc-windows-msvc'       | head -n1))
+                  echo "== SIGNATURES =="
+                  echo "darwin-aarch64 length: ${#SIG_MAC_ARM}"
+                  echo "darwin-x86_64  length: ${#SIG_MAC_X64}"
+                  echo "windows-x86_64 length: ${#SIG_WIN_X64}"
+                  echo "windows-i686   length: ${#SIG_WIN_X86}"
 
+                  # --- hard validation: signatures must be non-empty ---
+                  [ -n "$SIG_MAC_ARM" ] || { echo "❌ empty signature darwin-aarch64"; exit 1; }
+                  [ -n "$SIG_MAC_X64" ] || { echo "❌ empty signature darwin-x86_64";  exit 1; }
+                  [ -n "$SIG_WIN_X64" ] || { echo "❌ empty signature windows-x86_64";  exit 1; }
+                  [ -n "$SIG_WIN_X86" ] || { echo "❌ empty signature windows-i686";    exit 1; }
+
+                  # --- write updater.json ---
                   cat > release/updater.json << EOF
                   {
                     "version": "${VERSION_NO_V}",
@@ -229,6 +216,9 @@ jobs:
                   }
                   EOF
 
+                  echo "== GENERATED updater.json =="
+                  cat release/updater.json
+
             - name: Create GitHub Release (only curated files)
               uses: softprops/action-gh-release@v2
               with:
@@ -238,18 +228,18 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-            # - name: Checkout repo (for committing updater.json)
-            #   uses: actions/checkout@v4
+                  # - name: Checkout repo (for committing updater.json)
+                  #   uses: actions/checkout@v4
 
-            # - name: Commit updated updater.json to repo
-            #   run: |
-            #       if [ -f release/updater.json ]; then
-            #         mkdir -p public
-            #         cp release/updater.json public/updater.json
-            #         git config --local user.email "action@github.com"
-            #         git config --local user.name "GitHub Action"
-            #         git pull --rebase
-            #         git add public/updater.json
-            #         git commit -m "Update updater.json for ${GITHUB_REF#refs/tags/}" || true
-            #         git push || true
-            #       fi
+                  # - name: Commit updated updater.json to repo
+                  #   run: |
+                  #       if [ -f release/updater.json ]; then
+                  #         mkdir -p public
+                  #         cp release/updater.json public/updater.json
+                  #         git config --local user.email "action@github.com"
+                  #         git config --local user.name "GitHub Action"
+                  #         git pull --rebase
+                  #         git add public/updater.json
+                  #         git commit -m "Update updater.json for ${GITHUB_REF#refs/tags/}" || true
+                  #         git push || true
+                  #       fi
