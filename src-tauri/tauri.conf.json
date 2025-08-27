@@ -49,7 +49,7 @@
 	},
 	"plugins": {
 		"updater": {
-			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM4RUM5OEYyOUZCM0U1MDcKUldRSDViT2Y4cGpzeUdydTR3d3J0Rmw0MThrM01URkhtRGJlRGxDeG9zNExWWXk5R1N3b0htUXIK",
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZCNENFMUIwMkNDQzZBMUYKUldRZmFzd3NzT0ZNYTMrVG9qd29TTjZKRXpKYnR5azhML3h3RThObmtSZEZQTGNRM2gyY0FIdVMK",
 			"endpoints": [
 				"https://raw.githubusercontent.com/namelesscorp/tvault/master/public/updater.json"
 			]
