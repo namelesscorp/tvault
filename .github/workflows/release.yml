@@ -116,10 +116,53 @@ jobs:
               with:
                   path: dist
 
-            - name: Debug artifact contents
+            - name: Inspect artifacts & show updater.jsons
+              shell: bash
               run: |
                   echo "== DIST CONTENTS =="
-                  find dist -maxdepth 4 -type f || true
+                  find dist -maxdepth 5 -type f || true
+
+                  echo ""
+                  echo "== TAURI updater.json files =="
+                  mapfile -t UPS < <(find dist -type f -name 'updater.json' | sort)
+                  if [ ${#UPS[@]} -eq 0 ]; then
+                    echo "❌ No updater.json files found"; exit 1
+                  fi
+                  for f in "${UPS[@]}"; do
+                    echo "--- $f ---"
+                    cat "$f"
+                    echo ""
+                  done
+
+            - name: Extract & validate signatures
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  sudo apt-get update -y >/dev/null
+                  sudo apt-get install -y jq >/dev/null
+
+                  pick_sig () {
+                    local platform="$1"
+                    local pattern="$2"
+                    local file
+                    file="$(find dist -type f -name 'updater.json' | grep -F "$pattern" | head -n1 || true)"
+                    if [ -z "${file:-}" ]; then
+                      echo "❌ updater.json for $platform not found (pattern: $pattern)"; exit 1
+                    fi
+                    local sig
+                    sig="$(jq -r ".platforms[\"$platform\"].signature // empty" "$file")"
+                    local len=${#sig}
+                    echo "Platform=$platform | file=$file | signature_length=$len"
+                    if [ -z "$sig" ]; then
+                      echo "❌ EMPTY signature for $platform (check TAURI_SIGNING_PRIVATE_KEY / PASSWORD and pubkey)"; exit 1
+                    fi
+                    # echo "$sig" # <- если нужно увидеть саму подпись (обычно не нужно)
+                  }
+
+                  pick_sig "darwin-aarch64"   "aarch64-apple-darwin"
+                  pick_sig "darwin-x86_64"    "x86_64-apple-darwin"
+                  pick_sig "windows-x86_64"   "x86_64-pc-windows-msvc"
+                  pick_sig "windows-i686"     "i686-pc-windows-msvc"
 
             - name: Prepare release files (DMG + app.tar.gz + EXE)
               run: |
