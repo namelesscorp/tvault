@@ -90,6 +90,15 @@ jobs:
               run: |
                   yarn tauri build --target ${{ matrix.target }}
 
+            - name: Debug secrets
+              run: |
+                  echo "KEY length: ${#TAURI_SIGNING_PRIVATE_KEY}"
+                  if [ -n "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" ]; then echo "Password present"; else echo "Password MISSING"; fi
+              shell: bash
+              env:
+                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
             - name: Upload artifacts
               uses: actions/upload-artifact@v4
               with:
