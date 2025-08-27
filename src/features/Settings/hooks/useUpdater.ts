@@ -24,14 +24,14 @@ export const useUpdater = () => {
 		isChecking: false,
 		isDownloading: false,
 		isInstalling: false,
-		currentVersion: "0.1.0-beta",
+		currentVersion: APP_VERSION || "0.1.0-beta",
 		updateAvailable: false,
 		updateDownloaded: false,
 	});
 
 	const initializeVersion = useCallback(async () => {
 		try {
-			setState(prev => ({ ...prev, currentVersion: "0.1.0-beta" }));
+			setState(prev => ({ ...prev, currentVersion: APP_VERSION || "0.1.0-beta" }));
 		} catch (error) {
 			console.error("Failed to get app version:", error);
 		}

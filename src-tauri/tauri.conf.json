@@ -51,7 +51,7 @@
 		"updater": {
 			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZCNENFMUIwMkNDQzZBMUYKUldRZmFzd3NzT0ZNYTMrVG9qd29TTjZKRXpKYnR5azhML3h3RThObmtSZEZQTGNRM2gyY0FIdVMK",
 			"endpoints": [
-				"https://raw.githubusercontent.com/namelesscorp/tvault/master/public/updater.json"
+				"https://github.com/namelesscorp/tvault/releases/latest/download/updater.json"
 			]
 		}
 	}

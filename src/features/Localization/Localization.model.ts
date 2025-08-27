@@ -6,7 +6,7 @@ export enum LocalizationTypes {
 	Russian = "ru",
 }
 
-export const DEFAULT_LOCALE = LocalizationTypes.Russian;
+export const DEFAULT_LOCALE = LocalizationTypes.English;
 
 const RU = ruLocale;
 const EN = enLocale;

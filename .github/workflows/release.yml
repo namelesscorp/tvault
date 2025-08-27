@@ -186,18 +186,18 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Checkout repo (for committing updater.json)
-              uses: actions/checkout@v4
+            # - name: Checkout repo (for committing updater.json)
+            #   uses: actions/checkout@v4
 
-            - name: Commit updated updater.json to repo
-              run: |
-                  if [ -f release/updater.json ]; then
-                    mkdir -p public
-                    cp release/updater.json public/updater.json
-                    git config --local user.email "action@github.com"
-                    git config --local user.name "GitHub Action"
-                    git pull --rebase
-                    git add public/updater.json
-                    git commit -m "Update updater.json for ${GITHUB_REF#refs/tags/}" || true
-                    git push || true
-                  fi
+            # - name: Commit updated updater.json to repo
+            #   run: |
+            #       if [ -f release/updater.json ]; then
+            #         mkdir -p public
+            #         cp release/updater.json public/updater.json
+            #         git config --local user.email "action@github.com"
+            #         git config --local user.name "GitHub Action"
+            #         git pull --rebase
+            #         git add public/updater.json
+            #         git commit -m "Update updater.json for ${GITHUB_REF#refs/tags/}" || true
+            #         git push || true
+            #       fi
