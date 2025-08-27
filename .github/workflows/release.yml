@@ -58,6 +58,10 @@ jobs:
             - name: Install deps
               run: yarn --frozen-lockfile
 
+            - name: Select Xcode
+              if: startsWith(matrix.target, 'aarch64-apple-') || startsWith(matrix.target, 'x86_64-apple-')
+              run: sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
+
             - name: Build (macOS signed & notarized)
               if: startsWith(matrix.target, 'aarch64-apple-') || startsWith(matrix.target, 'x86_64-apple-')
               env:
