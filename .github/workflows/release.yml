@@ -86,6 +86,7 @@ jobs:
               if: ${{ !(startsWith(matrix.target, 'aarch64-apple-') || startsWith(matrix.target, 'x86_64-apple-')) }}
               env:
                   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
               run: |
                   yarn tauri build --target ${{ matrix.target }}
 
