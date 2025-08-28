@@ -58,7 +58,7 @@
 	"container.mountPath": "Путь монтирования",
 	"container.folderPath": "Путь к папке",
 	"container.containerPath": "Путь к контейнеру",
-	"container.savePath.shares": "Путь для сохранения токенов",
+	"container.savePath.share": "Путь для сохранения токенов",
 	"container.savePath.master": "Путь для сохранения master токена",
 	"container.savePath.password": "Путь для сохранения пароля",
 	"container.tagsPlaceholder": "Введите теги (через запятую)",

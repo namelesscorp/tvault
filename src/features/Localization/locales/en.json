@@ -58,7 +58,7 @@
 	"container.mountPath": "Mount path",
 	"container.folderPath": "Folder path",
 	"container.containerPath": "Container path",
-	"container.savePath.shares": "Save path for shares",
+	"container.savePath.share": "Save path for shares",
 	"container.savePath.master": "Save path for master token",
 	"container.savePath.password": "Save path for password",
 	"container.tagsPlaceholder": "Enter tags (comma separated)",

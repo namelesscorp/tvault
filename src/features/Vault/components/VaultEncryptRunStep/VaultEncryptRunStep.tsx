@@ -291,16 +291,6 @@ const VaultEncryptRunStep = () => {
 								onClick={openFileFolder}
 								style={{ width: "fit-content" }}
 							/>
-							{savedAdditionalPassword && (
-								<UIButton
-									icon={icons.copy}
-									text="Copy integrity password"
-									onClick={() =>
-										copy(savedAdditionalPassword)
-									}
-									style={{ width: "fit-content" }}
-								/>
-							)}
 							<UIButton
 								icon={icons.check}
 								text="Done"
@@ -317,7 +307,8 @@ const VaultEncryptRunStep = () => {
 							<p className="text-[16px] text-medium overflow-hidden text-ellipsis whitespace-nowrap text-white">
 								{formatMessage({
 									id: "container.integrityPassword",
-								})}{" "}
+								})}
+								{": "}
 								{savedAdditionalPassword}
 							</p>
 							<button

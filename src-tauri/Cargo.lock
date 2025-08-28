@@ -4486,7 +4486,7 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tvault-client"
-version = "0.1.0-beta"
+version = "0.1.1-beta"
 dependencies = [
  "once_cell",
  "serde",
