@@ -10,6 +10,8 @@ use std::{
 use serde::Deserialize;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Wry};
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 
 /* ─────────── Encrypt/Decrypt Arguments ─────────── */
 
@@ -102,6 +104,8 @@ pub async fn container_info_once(args: ContainerInfoArgs) -> Result<serde_json::
   use std::io::Read;
   let path_ctx = args.path.clone();
   let mut cmd = build_container_info_cmd(args)?;
+  #[cfg(target_os = "windows")]
+  { cmd.creation_flags(0x08000000); } // CREATE_NO_WINDOW
   let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().map_err(|e| e.to_string())?;
   let mut stdout = String::new();
   if let Some(mut out) = child.stdout.take() { let _ = out.read_to_string(&mut stdout); }
@@ -347,6 +351,8 @@ fn build_reseal_cmd(a: ResealArgs) -> Result<Command, String> {
 /* ─────────── Process Execution & Events ─────────── */
 
 fn spawn_process(app: AppHandle<Wry>, mut cmd: Command, prefix: &'static str) -> Result<(), String> {
+  #[cfg(target_os = "windows")]
+  { cmd.creation_flags(0x08000000); } // CREATE_NO_WINDOW
   let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().map_err(|e| e.to_string())?;
   let stdout = child.stdout.take().ok_or("cannot capture stdout")?;
   let stderr = child.stderr.take().ok_or("cannot capture stderr")?;
@@ -434,6 +440,8 @@ fn spawn_process(app: AppHandle<Wry>, mut cmd: Command, prefix: &'static str) ->
 }
 
 fn spawn_process_with_context(app: AppHandle<Wry>, mut cmd: Command, prefix: &'static str, context_path: Option<String>) -> Result<(), String> {
+  #[cfg(target_os = "windows")]
+  { cmd.creation_flags(0x08000000); } // CREATE_NO_WINDOW
   let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().map_err(|e| e.to_string())?;
   let stdout = child.stdout.take().ok_or("cannot capture stdout")?;
   let stderr = child.stderr.take().ok_or("cannot capture stderr")?;
