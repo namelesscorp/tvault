@@ -1,6 +1,6 @@
 import { relaunch } from "@tauri-apps/plugin-process";
-import { check } from "@tauri-apps/plugin-updater";
-import { useCallback, useState } from "react";
+import { Update, check } from "@tauri-apps/plugin-updater";
+import { useCallback, useRef, useState } from "react";
 
 export interface UpdateInfo {
 	version: string;
@@ -20,6 +20,8 @@ export interface UpdateState {
 }
 
 export const useUpdater = () => {
+	const updateRef = useRef<Update | null>(null);
+
 	const [state, setState] = useState<UpdateState>({
 		isChecking: false,
 		isDownloading: false,
@@ -45,6 +47,7 @@ export const useUpdater = () => {
 
 		try {
 			const update = await check();
+			updateRef.current = update;
 
 			if (update) {
 				setState(prev => ({
@@ -74,12 +77,11 @@ export const useUpdater = () => {
 		setState(prev => ({ ...prev, isDownloading: true, error: undefined }));
 
 		try {
-			const update = await check();
-			if (!update) {
+			if (!updateRef.current) {
 				throw new Error("No update available");
 			}
 
-			await update.download();
+			await updateRef.current.download();
 
 			setState(prev => ({
 				...prev,
@@ -101,12 +103,17 @@ export const useUpdater = () => {
 		setState(prev => ({ ...prev, isInstalling: true, error: undefined }));
 
 		try {
-			const update = await check();
-			if (!update) {
+			if (!state.updateDownloaded) {
+				throw new Error(
+					"Update must be downloaded before installation",
+				);
+			}
+
+			if (!updateRef.current) {
 				throw new Error("No update available");
 			}
 
-			await update.install();
+			await updateRef.current.install();
 
 			await relaunch();
 		} catch (error) {
@@ -120,10 +127,21 @@ export const useUpdater = () => {
 						: "Installation failed",
 			}));
 		}
-	}, []);
+	}, [state.updateDownloaded]);
 
 	const resetError = useCallback(() => {
 		setState(prev => ({ ...prev, error: undefined }));
+	}, []);
+
+	const resetUpdateState = useCallback(() => {
+		updateRef.current = null;
+		setState(prev => ({
+			...prev,
+			updateAvailable: false,
+			updateDownloaded: false,
+			latestVersion: undefined,
+			error: undefined,
+		}));
 	}, []);
 
 	return {
@@ -133,5 +151,6 @@ export const useUpdater = () => {
 		downloadUpdate,
 		installUpdate,
 		resetError,
+		resetUpdateState,
 	};
 };

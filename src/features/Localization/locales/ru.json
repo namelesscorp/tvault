@@ -185,9 +185,14 @@
 	"settings.updateAvailable": "Доступно обновление",
 	"settings.updateNotAvailable": "Обновлений нет",
 	"settings.downloadingUpdate": "Загрузка обновления...",
+	"settings.downloadUpdate": "Скачать обновление",
 	"settings.installingUpdate": "Установка обновления...",
 	"settings.updateDownloaded": "Обновление загружено",
 	"settings.restartToUpdate": "Перезапустить для обновления",
 	"settings.updateError": "Ошибка обновления",
-	"settings.updateSuccess": "Обновление успешно установлено"
+	"settings.updateSuccess": "Обновление успешно установлено",
+	"settings.updateNotDownloaded": "Обновление должно быть скачано перед установкой",
+	"settings.updateDownloadFailed": "Не удалось скачать обновление",
+	"settings.updateInstallFailed": "Не удалось установить обновление",
+	"settings.resetUpdate": "Сбросить"
 }

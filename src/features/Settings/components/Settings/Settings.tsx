@@ -145,29 +145,33 @@ const Settings = () => {
 							<div className="text-red-400 text-sm">{error}</div>
 						)}
 						<div className="flex items-center gap-[10px]">
-							<UIButton
-								icon={icons.refresh}
-								text={formatMessage({
-									id: "settings.checkUpdates",
-								})}
-								onClick={handleCheckUpdates}
-								disabled={
-									isChecking || isDownloading || isInstalling
-								}
-								style={{ width: "fit-content" }}
-							/>
+							{!updateAvailable && (
+								<UIButton
+									icon={icons.refresh}
+									text={formatMessage({
+										id: "settings.checkUpdates",
+									})}
+									onClick={handleCheckUpdates}
+									disabled={
+										isChecking ||
+										isDownloading ||
+										isInstalling
+									}
+									style={{ width: "fit-content" }}
+								/>
+							)}
 							{updateAvailable && !updateDownloaded && (
 								<UIButton
 									icon={icons.download}
 									text={formatMessage({
-										id: "settings.downloadingUpdate",
+										id: "settings.downloadUpdate",
 									})}
 									onClick={handleDownloadUpdate}
 									disabled={isDownloading || isInstalling}
 									style={{ width: "fit-content" }}
 								/>
 							)}
-							{updateDownloaded && (
+							{updateDownloaded && updateAvailable && (
 								<UIButton
 									icon={icons.refresh}
 									text={formatMessage({

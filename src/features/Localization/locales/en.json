@@ -185,9 +185,14 @@
 	"settings.updateAvailable": "Update available",
 	"settings.updateNotAvailable": "No updates available",
 	"settings.downloadingUpdate": "Downloading update...",
+	"settings.downloadUpdate": "Download update",
 	"settings.installingUpdate": "Installing update...",
 	"settings.updateDownloaded": "Update downloaded",
 	"settings.restartToUpdate": "Restart to update",
 	"settings.updateError": "Update error",
-	"settings.updateSuccess": "Update installed successfully"
+	"settings.updateSuccess": "Update installed successfully",
+	"settings.updateNotDownloaded": "Update must be downloaded before installation",
+	"settings.updateDownloadFailed": "Failed to download update",
+	"settings.updateInstallFailed": "Failed to install update",
+	"settings.resetUpdate": "Reset"
 }
