@@ -28,7 +28,7 @@
 	},
 	"bundle": {
 		"active": true,
-		"targets": ["dmg", "app", "nsis"],
+		"targets": ["dmg", "app", "nsis", "deb", "appimage"],
 		"createUpdaterArtifacts": true,
 		"icon": [
 			"icons/32x32.png",
@@ -45,6 +45,10 @@
 		},
 		"windows": {
 			"webviewInstallMode": { "type": "downloadBootstrapper" }
+		},
+		"linux": {
+			"category": "Utility",
+			"desktop": true
 		}
 	},
 	"plugins": {

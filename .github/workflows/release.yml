@@ -27,10 +27,13 @@ jobs:
                       target: i686-pc-windows-msvc
                       artifact_name: tvault-client_i686-pc-windows-msvc
 
-                    # Linux x64
+                    # Linux
+                    - os: ubuntu-22.04
+                      target: x86_64-unknown-linux-gnu
+                      artifact_name: tvault-client_x86_64-unknown-linux-gnu
                     # - os: ubuntu-22.04
-                    #   target: x86_64-unknown-linux-gnu
-                    #   artifact_name: tvault-client_x86_64-unknown-linux-gnu
+                    #   target: aarch64-unknown-linux-gnu
+                    #   artifact_name: tvault-client_aarch64-unknown-linux-gnu
 
         runs-on: ${{ matrix.os }}
 
@@ -69,6 +72,22 @@ jobs:
               if: matrix.os == 'windows-latest'
               run: choco install nsis -y
 
+            - name: Install Linux deps (only on Ubuntu)
+              if: matrix.os == 'ubuntu-22.04'
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y \
+                    build-essential \
+                    libssl-dev \
+                    libgtk-3-dev \
+                    libayatana-appindicator3-dev \
+                    librsvg2-dev \
+                    libwebkit2gtk-4.1-dev \
+                    libsoup-3.0-dev \
+                    patchelf \
+                    desktop-file-utils \
+                    appstream
+
             - name: Build (macOS signed & notarized)
               if: startsWith(matrix.target, 'aarch64-apple-') || startsWith(matrix.target, 'x86_64-apple-')
               env:
@@ -82,8 +101,16 @@ jobs:
               run: |
                   yarn tauri build --target ${{ matrix.target }}
 
-            - name: Build (other)
-              if: ${{ !(startsWith(matrix.target, 'aarch64-apple-') || startsWith(matrix.target, 'x86_64-apple-')) }}
+            - name: Build (Windows)
+              if: matrix.os == 'windows-latest'
+              env:
+                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+              run: |
+                  yarn tauri build --target ${{ matrix.target }}
+
+            - name: Build (Linux)
+              if: matrix.os == 'ubuntu-22.04'
               env:
                   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -147,12 +174,19 @@ jobs:
                   WIN_X64_SIG="${WIN_X64_EXE}.sig"
                   WIN_X86_SIG="${WIN_X86_EXE}.sig"
 
+                  # --- locate Linux files ---
+                  LINUX_X64_TGZ=$(find dist -type f -path '*/appimage/*.AppImage.tar.gz' | grep -F 'x86_64-unknown-linux-gnu' | head -n1)
+                  LINUX_X64_SIG="${LINUX_X64_TGZ}.sig"
+                  LINUX_X64_BIN=$(find dist -type f -path '*/appimage/*.AppImage' | grep -F 'x86_64-unknown-linux-gnu' | head -n1 || true)
+
                   # --- required files must exist ---
                   for f in \
                     "$MAC_ARM_TGZ" "$MAC_X64_TGZ" \
                     "$MAC_ARM_SIG" "$MAC_X64_SIG" \
                     "$WIN_X64_EXE" "$WIN_X86_EXE" \
-                    "$WIN_X64_SIG" "$WIN_X86_SIG"
+                    "$WIN_X64_SIG" "$WIN_X86_SIG" \
+                    "$LINUX_X64_TGZ" "$LINUX_X64_BIN" \
+                    "$LINUX_X64_SIG"
                   do
                     if [ ! -f "$f" ]; then echo "❌ Not found: $f"; exit 1; fi
                   done
@@ -169,6 +203,10 @@ jobs:
                   cp "$MAC_X64_TGZ" "release/TrustVault_${VERSION_NO_V}_x64.app.tar.gz"
                   cp "$WIN_X64_EXE" "release/TrustVault_${VERSION_NO_V}_x64-setup.exe"
                   cp "$WIN_X86_EXE" "release/TrustVault_${VERSION_NO_V}_x86-setup.exe"
+                  cp "$LINUX_X64_TGZ" "release/TrustVault_${VERSION_NO_V}_x86_64.AppImage.tar.gz"
+                  if [ -n "${LINUX_X64_BIN:-}" ] && [ -f "$LINUX_X64_BIN" ]; then
+                    cp "$LINUX_X64_BIN" "release/TrustVault_${VERSION_NO_V}_x86_64.AppImage"
+                  fi
 
                   # --- read signatures from .sig files ---
                   read_trim () { tr -d '\r\n' < "$1" | xargs echo -n; } # trim CR/LF + spaces
@@ -176,18 +214,21 @@ jobs:
                   SIG_MAC_X64="$(read_trim "$MAC_X64_SIG")"
                   SIG_WIN_X64="$(read_trim "$WIN_X64_SIG")"
                   SIG_WIN_X86="$(read_trim "$WIN_X86_SIG")"
+                  SIG_LINUX_X64="$(read_trim "$LINUX_X64_SIG")"
 
                   echo "== SIGNATURES =="
                   echo "darwin-aarch64 length: ${#SIG_MAC_ARM}"
                   echo "darwin-x86_64  length: ${#SIG_MAC_X64}"
                   echo "windows-x86_64 length: ${#SIG_WIN_X64}"
                   echo "windows-i686   length: ${#SIG_WIN_X86}"
+                  echo "linux-x86_64  length: ${#SIG_LINUX_X64}"
 
                   # --- hard validation: signatures must be non-empty ---
                   [ -n "$SIG_MAC_ARM" ] || { echo "❌ empty signature darwin-aarch64"; exit 1; }
                   [ -n "$SIG_MAC_X64" ] || { echo "❌ empty signature darwin-x86_64";  exit 1; }
                   [ -n "$SIG_WIN_X64" ] || { echo "❌ empty signature windows-x86_64";  exit 1; }
                   [ -n "$SIG_WIN_X86" ] || { echo "❌ empty signature windows-i686";    exit 1; }
+                  [ -n "$SIG_LINUX_X64" ] || { echo "❌ empty signature linux-x86_64";   exit 1; }
 
                   # --- write updater.json ---
                   cat > release/updater.json << EOF
@@ -211,6 +252,10 @@ jobs:
                       "windows-i686": {
                         "signature": "${SIG_WIN_X86}",
                         "url": "${URL_BASE}/TrustVault_${VERSION_NO_V}_x86-setup.exe"
+                      },
+                      "linux-x86_64": {
+                        "signature": "${SIG_LINUX_X64}",
+                        "url": "${URL_BASE}/TrustVault_${VERSION_NO_V}_x86_64.AppImage.tar.gz"
                       }
                     }
                   }
