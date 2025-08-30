@@ -175,9 +175,8 @@ jobs:
                   WIN_X86_SIG="${WIN_X86_EXE}.sig"
 
                   # --- locate Linux files ---
-                  LINUX_X64_TGZ=$(find dist -type f -path '*/appimage/*.AppImage.tar.gz' | grep -F 'x86_64-unknown-linux-gnu' | head -n1)
-                  LINUX_X64_SIG="${LINUX_X64_TGZ}.sig"
-                  LINUX_X64_BIN=$(find dist -type f -path '*/appimage/*.AppImage' | grep -F 'x86_64-unknown-linux-gnu' | head -n1 || true)
+                  LINUX_X64_BIN=$(find dist -type f -path '*/appimage/*.AppImage' | grep -F 'x86_64-unknown-linux-gnu' | head -n1)
+                  LINUX_X64_SIG="${LINUX_X64_BIN}.sig"
 
                   # --- required files must exist ---
                   for f in \
@@ -185,8 +184,8 @@ jobs:
                     "$MAC_ARM_SIG" "$MAC_X64_SIG" \
                     "$WIN_X64_EXE" "$WIN_X86_EXE" \
                     "$WIN_X64_SIG" "$WIN_X86_SIG" \
-                    "$LINUX_X64_TGZ" "$LINUX_X64_BIN" \
-                    "$LINUX_X64_SIG"
+                    "$LINUX_X64_BIN" "$LINUX_X64_SIG"
+                    
                   do
                     if [ ! -f "$f" ]; then echo "❌ Not found: $f"; exit 1; fi
                   done
@@ -203,10 +202,7 @@ jobs:
                   cp "$MAC_X64_TGZ" "release/TrustVault_${VERSION_NO_V}_x64.app.tar.gz"
                   cp "$WIN_X64_EXE" "release/TrustVault_${VERSION_NO_V}_x64-setup.exe"
                   cp "$WIN_X86_EXE" "release/TrustVault_${VERSION_NO_V}_x86-setup.exe"
-                  cp "$LINUX_X64_TGZ" "release/TrustVault_${VERSION_NO_V}_x86_64.AppImage.tar.gz"
-                  if [ -n "${LINUX_X64_BIN:-}" ] && [ -f "$LINUX_X64_BIN" ]; then
-                    cp "$LINUX_X64_BIN" "release/TrustVault_${VERSION_NO_V}_x86_64.AppImage"
-                  fi
+                  cp "$LINUX_X64_BIN" "release/TrustVault_${VERSION_NO_V}_x86_64.AppImage"
 
                   # --- read signatures from .sig files ---
                   read_trim () { tr -d '\r\n' < "$1" | xargs echo -n; } # trim CR/LF + spaces
@@ -255,7 +251,7 @@ jobs:
                       },
                       "linux-x86_64": {
                         "signature": "${SIG_LINUX_X64}",
-                        "url": "${URL_BASE}/TrustVault_${VERSION_NO_V}_x86_64.AppImage.tar.gz"
+                        "url": "${URL_BASE}/TrustVault_${VERSION_NO_V}_x86_64.AppImage"
                       }
                     }
                   }
