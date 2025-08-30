@@ -45,10 +45,6 @@
 		},
 		"windows": {
 			"webviewInstallMode": { "type": "downloadBootstrapper" }
-		},
-		"linux": {
-			"category": "Utility",
-			"desktop": true
 		}
 	},
 	"plugins": {
