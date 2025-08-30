@@ -20,8 +20,7 @@
     "build:win-32": "yarn tauri build --target i686-pc-windows-msvc",
     "build:win-64": "yarn tauri build --target x86_64-pc-windows-msvc",
     "build:mac": "yarn build:mac-arm && yarn build:mac-intel",
-    "build:win": "yarn build:win-32 && yarn build:win-64",
-    "release:tag": "git tag v$(node -p \"require('./package.json').version\") && git push --tags"
+    "build:win": "yarn build:win-32 && yarn build:win-64"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
