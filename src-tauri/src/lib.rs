@@ -113,25 +113,35 @@ fn open_path_native(path: String) -> Result<(), String> {
 
     #[cfg(target_os = "linux")]
     {
-        let mut whitelist = vec![
+        let v_display = std::env::var("DISPLAY").unwrap_or_default();
+        let v_wayland = std::env::var("WAYLAND_DISPLAY").unwrap_or_default();
+        let v_xdg_rt  = std::env::var("XDG_RUNTIME_DIR").unwrap_or_default();
+        let v_dbus    = std::env::var("DBUS_SESSION_BUS_ADDRESS").unwrap_or_default();
+        let v_home    = std::env::var("HOME").unwrap_or_default();
+        let v_user    = std::env::var("USER").unwrap_or_default();
+        let v_lang    = std::env::var("LANG").unwrap_or_else(|_| "C".to_string());
+    
+        let whitelist: [(&str, &str); 8] = [
             ("PATH", "/usr/bin:/bin:/usr/local/bin"),
-            ("DISPLAY", std::env::var("DISPLAY").unwrap_or_default().as_str()),
-            ("WAYLAND_DISPLAY", std::env::var("WAYLAND_DISPLAY").unwrap_or_default().as_str()),
-            ("XDG_RUNTIME_DIR", std::env::var("XDG_RUNTIME_DIR").unwrap_or_default().as_str()),
-            ("DBUS_SESSION_BUS_ADDRESS", std::env::var("DBUS_SESSION_BUS_ADDRESS").unwrap_or_default().as_str()),
-            ("HOME", std::env::var("HOME").unwrap_or_default().as_str()),
-            ("USER", std::env::var("USER").unwrap_or_default().as_str()),
-            ("LANG", std::env::var("LANG").unwrap_or("C".to_string()).as_str()),
+            ("DISPLAY", v_display.as_str()),
+            ("WAYLAND_DISPLAY", v_wayland.as_str()),
+            ("XDG_RUNTIME_DIR", v_xdg_rt.as_str()),
+            ("DBUS_SESSION_BUS_ADDRESS", v_dbus.as_str()),
+            ("HOME", v_home.as_str()),
+            ("USER", v_user.as_str()),
+            ("LANG", v_lang.as_str()),
         ];
-
+    
         let toxic_vars = [
             "LD_LIBRARY_PATH","LD_PRELOAD","APPDIR","APPIMAGE","APPIMAGE_SILENT_INSTALL",
             "GIO_MODULE_DIR","GTK_PATH","QT_PLUGIN_PATH","QT_QPA_PLATFORM_PLUGIN_PATH",
             "XDG_DATA_DIRS","XDG_CURRENT_DESKTOP","XDG_SESSION_DESKTOP"
         ];
-
+    
+        let is_dir = std::path::Path::new(&path).is_dir();
+    
         let run_clean = |bin: &str, args: &[&str]| -> Result<(), String> {
-            let mut cmd = Command::new(bin);
+            let mut cmd = std::process::Command::new(bin);
             cmd.env_clear();
             for (k, v) in &whitelist {
                 if !v.is_empty() { cmd.env(k, v); }
@@ -146,9 +156,7 @@ fn open_path_native(path: String) -> Result<(), String> {
                 Err(e) => Err(format!("spawn {bin} failed: {e}")),
             }
         };
-
-        let mut last_err: Option<String> = None;
-
+    
         let try_seq: &[(&str, &[&str])] = if is_dir {
             &[
                 ("/usr/bin/xdg-open", &[&path]),
@@ -173,11 +181,12 @@ fn open_path_native(path: String) -> Result<(), String> {
                 ("/usr/bin/kde-open5", &[&path]),
             ]
         };
-
+    
+        let mut last_err: Option<String> = None;
         for (bin, args) in try_seq {
             match run_clean(bin, args) {
                 Ok(()) => return Ok(()),
-                Err(e) => { last_err = Some(e); }
+                Err(e) => last_err = Some(e),
             }
         }
         return Err(last_err.unwrap_or_else(|| "no opener matched".into()));
