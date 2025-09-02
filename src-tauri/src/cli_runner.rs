@@ -574,50 +574,107 @@ fn validate_encrypt(a: &EncryptArgs) -> Result<(), String> {
 
 /* ─────────── Locate tvault-core ─────────── */
 
-fn locate_binary() -> Result<PathBuf, String> {
-  use std::fs;
-  #[cfg(unix)] use std::os::unix::fs::PermissionsExt;
+fn locate_binary() -> Result<std::path::PathBuf, String> {
+  use std::{fs, io, path::PathBuf};
+  #[cfg(unix)]
+  use std::os::unix::fs::PermissionsExt;
+  use std::time::{SystemTime, UNIX_EPOCH};
 
-  let exe = current_exe().map_err(|e| e.to_string())?;
+  fn home_dir() -> Option<PathBuf> {
+    std::env::var_os("HOME").map(PathBuf::from)
+  }
+
+  #[cfg(target_os = "macos")]
+  fn cache_base_dir() -> PathBuf {
+    // ~/Library/Caches
+    home_dir()
+      .map(|h| h.join("Library").join("Caches"))
+      .unwrap_or_else(std::env::temp_dir)
+  }
+
+  #[cfg(all(unix, not(target_os = "macos")))]
+  fn cache_base_dir() -> PathBuf {
+    if let Some(xdg) = std::env::var_os("XDG_CACHE_HOME") {
+      PathBuf::from(xdg)
+    } else if let Some(home) = home_dir() {
+      home.join(".cache")
+    } else {
+      std::env::temp_dir()
+    }
+  }
+
+  let exe = std::env::current_exe().map_err(|e| e.to_string())?;
   let dir = exe.parent().ok_or("failed to locate dir")?;
 
   #[cfg(target_os = "windows")]
-  let candidates = vec![dir.join("tvault-core.exe")];
+  {
+    let p = dir.join("tvault-core.exe");
+    if p.exists() { return Ok(p); }
+    return Err("tvault-core.exe not found".into());
+  }
 
-  #[cfg(not(target_os = "windows"))]
-  let candidates = {
-    let mut v = vec![dir.join("tvault-core"), dir.join("tvault-core-aarch64-apple-darwin")];
-    // dev-run fallback: ../../src-tauri/binaries/...
-    if let Some(project_root) = dir.parent().and_then(|p| p.parent()) {
-      v.push(project_root.join("src-tauri/binaries/tvault-core"));
-      v.push(project_root.join("src-tauri/binaries/tvault-core-aarch64-apple-darwin"));
+  #[cfg(all(unix, not(target_os = "windows")))]
+  {
+    // Рядом с GUI + dev-fallback в репо
+    let mut candidates: Vec<PathBuf> = vec![dir.join("tvault-core")];
+    if let Some(root) = dir.parent().and_then(|p| p.parent()) {
+      candidates.push(root.join("src-tauri/binaries/tvault-core"));
     }
-    v
-  };
 
-  let mut tried: Vec<String> = Vec::new();
-  for c in candidates {
-    let disp = c.display().to_string();
-    tried.push(disp.clone());
-    if c.exists() {
-      // try to ensure executable bit; ignore errors on non-unix
+    let mut tried = Vec::new();
+
+    fn prepare_exec(p: &PathBuf) -> io::Result<PathBuf> {
+      let meta = fs::metadata(p)?;
       #[cfg(unix)]
-      if let Ok(meta) = fs::metadata(&c) {
+      {
         let mut perm = meta.permissions();
         let mode = perm.mode();
-        if mode & 0o111 == 0 {
-          let new_mode = mode | 0o755;
-          perm.set_mode(new_mode);
-          let _ = fs::set_permissions(&c, perm);
+        if (mode & 0o111) == 0 {
+          let mut newp = perm.clone();
+          newp.set_mode(mode | 0o755);
+          if fs::set_permissions(p, newp).is_ok() {
+            return Ok(p.clone());
+          }
+        } else {
+          return Ok(p.clone());
         }
       }
-      // macOS Gatekeeper quarantine: try to drop attribute, best-effort
-      #[cfg(target_os = "macos")]
+
+      // Staging in cache (writable), then +x
+      let base = cache_base_dir().join("tvault-core");
+      let stamp = format!(
+        "{}-{}",
+        std::process::id(),
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis()
+      );
+      let staged_dir = base.join(stamp);
+      fs::create_dir_all(&staged_dir)?;
+      let staged = staged_dir.join("tvault-core");
+      fs::copy(p, &staged)?;
+      #[cfg(unix)]
       {
-        let _ = Command::new("/usr/bin/xattr").arg("-d").arg("com.apple.quarantine").arg(&c).output();
+        let mut st_perm = fs::metadata(&staged)?.permissions();
+        st_perm.set_mode(0o755);
+        fs::set_permissions(&staged, st_perm)?;
       }
-      return Ok(c);
+      Ok(staged)
     }
+
+    for c in candidates {
+      tried.push(c.display().to_string());
+      if c.exists() {
+        #[cfg(target_os = "macos")]
+        {
+          let _ = std::process::Command::new("/usr/bin/xattr")
+            .arg("-d").arg("com.apple.quarantine").arg(&c).output();
+        }
+        match prepare_exec(&c) {
+          Ok(path) => return Ok(path),
+          Err(e) => tried.push(format!("prepare_exec failed: {e}")),
+        }
+      }
+    }
+
+    Err(format!("tvault-core not found or not executable. Tried: {}", tried.join(", ")))
   }
-  Err(format!("tvault-core not found. Tried: {}", tried.join(", ")))
 }

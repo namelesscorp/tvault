@@ -1,6 +1,6 @@
 [package]
 name = "tvault-client"
-version = "0.1.2-beta"
+version = "0.1.3-beta"
 description = "A Tauri App"
 authors = ["nameless"]
 edition = "2021"

@@ -2,83 +2,6 @@
 
 TVault is a cross-platform desktop application for creating secure encrypted vaults. A vault is essentially an encrypted folder (or container) that you can lock and unlock on demand to protect your sensitive files. When locked, all data inside the vault is encrypted and inaccessible. When unlocked, the vault behaves like a normal folder on your system, allowing you to add, remove, or edit files easily. TVault is designed with a focus on strong security, privacy, and ease of use on Windows and macOS.
 
-## Build
-
-### Prerequisites
-
-Before running this project, make sure you have the following installed:
-
-- **Node.js** (v18 or higher)
-- **Yarn** package manager
-- **Rust** (latest stable version)
-- **Tauri CLI**: `cargo install tauri-cli`
-
-#### Installing Rust
-
-If you don't have Rust installed, follow the official installation guide:
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-#### Installing Tauri CLI
-
-```bash
-cargo install tauri-cli
-```
-
-### Getting Started
-
-1. **Clone the repository**
-
-    ```bash
-    git clone https://github.com/namelesscorp/tvault.git
-    cd tvault
-    ```
-
-2. **Install dependencies**
-
-    ```bash
-    yarn install
-    ```
-
-3. **Run the development server**
-    ```bash
-    yarn tauri:dev
-    ```
-
-This will start both the frontend development server and the Tauri application.
-
-### Available Scripts
-
-#### Development
-
-- `yarn dev` — Start Vite development server only
-- `yarn tauri:dev` — Start Tauri development mode (recommended)
-- `yarn preview` — Start Vite preview server
-
-#### Build
-
-- `yarn build` — Build for development
-- `yarn build:dev` — Build Vite in development mode
-- `yarn build:prod` — Build Vite in production mode
-- `yarn tauri:build` — Build Tauri app
-
-#### Cross-platform Build
-
-- `yarn build:all` — Build for all platforms (macOS ARM, macOS Intel, Windows 32-bit, Windows 64-bit)
-- `yarn build:mac-arm` — Build for macOS ARM (Apple Silicon)
-- `yarn build:mac-intel` — Build for macOS Intel
-- `yarn build:win-32` — Build for Windows 32-bit
-- `yarn build:win-64` — Build for Windows 64-bit
-- `yarn build:mac` — Build for both macOS architectures
-- `yarn build:win` — Build for both Windows architectures
-
-#### Code Quality
-
-- `yarn format` — Format code with Prettier and fix ESLint errors
-- `yarn lint:eslint` — Run ESLint
-
 ## Features
 
 - **Secure Storage:** Protect your files with AES-256 encryption – a strong, industry-standard cipher. You can choose one of several methods to secure your vault’s encryption key:
@@ -159,6 +82,83 @@ TVault follows a simple flow: **Create** → **Unlock** → **Work with files** 
 
 - While a vault is unlocked, its contents exist in the OS temp directory — treat the session as sensitive (lock when you step away).
 - No recovery: if you lose the required credentials (password, master key, or Shamir shares), the vault cannot be recovered. Back up keys/shares securely.
+
+## Build
+
+### Prerequisites
+
+Before running this project, make sure you have the following installed:
+
+- **Node.js** (v18 or higher)
+- **Yarn** package manager
+- **Rust** (latest stable version)
+- **Tauri CLI**: `cargo install tauri-cli`
+
+#### Installing Rust
+
+If you don't have Rust installed, follow the official installation guide:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+#### Installing Tauri CLI
+
+```bash
+cargo install tauri-cli
+```
+
+### Getting Started
+
+1. **Clone the repository**
+
+    ```bash
+    git clone https://github.com/namelesscorp/tvault.git
+    cd tvault
+    ```
+
+2. **Install dependencies**
+
+    ```bash
+    yarn install
+    ```
+
+3. **Run the development server**
+    ```bash
+    yarn tauri:dev
+    ```
+
+This will start both the frontend development server and the Tauri application.
+
+### Available Scripts
+
+#### Development
+
+- `yarn dev` — Start Vite development server only
+- `yarn tauri:dev` — Start Tauri development mode (recommended)
+- `yarn preview` — Start Vite preview server
+
+#### Build
+
+- `yarn build` — Build for development
+- `yarn build:dev` — Build Vite in development mode
+- `yarn build:prod` — Build Vite in production mode
+- `yarn tauri:build` — Build Tauri app
+
+#### Cross-platform Build
+
+- `yarn build:all` — Build for all platforms (macOS ARM, macOS Intel, Windows 32-bit, Windows 64-bit)
+- `yarn build:mac-arm` — Build for macOS ARM (Apple Silicon)
+- `yarn build:mac-intel` — Build for macOS Intel
+- `yarn build:win-32` — Build for Windows 32-bit
+- `yarn build:win-64` — Build for Windows 64-bit
+- `yarn build:mac` — Build for both macOS architectures
+- `yarn build:win` — Build for both Windows architectures
+
+#### Code Quality
+
+- `yarn format` — Format code with Prettier and fix ESLint errors
+- `yarn lint:eslint` — Run ESLint
 
 ## Command-Line Interface (CLI)
 
