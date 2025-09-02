@@ -104,49 +104,80 @@ fn remove_dir(path: String, recursive: bool) -> Result<(), String> {
 #[tauri::command]
 fn open_path_native(path: String) -> Result<(), String> {
     use std::path::Path;
+    use std::process::Command;
     let p = Path::new(&path);
     if !p.exists() {
         return Err(format!("Path does not exist: {}", path));
     }
+    let is_dir = p.is_dir();
 
     #[cfg(target_os = "linux")]
     {
-        // absolute paths to «host» binaries + PATH forcibly
-        let candidates = [
-            "/usr/bin/xdg-open",
-            "/bin/xdg-open",
-            "/usr/bin/gio",
-            "/bin/gio",
-            "/usr/bin/kioclient5",
-            "/usr/bin/kde-open5",
+        let mut whitelist = vec![
+            ("PATH", "/usr/bin:/bin:/usr/local/bin"),
+            ("DISPLAY", std::env::var("DISPLAY").unwrap_or_default().as_str()),
+            ("WAYLAND_DISPLAY", std::env::var("WAYLAND_DISPLAY").unwrap_or_default().as_str()),
+            ("XDG_RUNTIME_DIR", std::env::var("XDG_RUNTIME_DIR").unwrap_or_default().as_str()),
+            ("DBUS_SESSION_BUS_ADDRESS", std::env::var("DBUS_SESSION_BUS_ADDRESS").unwrap_or_default().as_str()),
+            ("HOME", std::env::var("HOME").unwrap_or_default().as_str()),
+            ("USER", std::env::var("USER").unwrap_or_default().as_str()),
+            ("LANG", std::env::var("LANG").unwrap_or("C".to_string()).as_str()),
         ];
-        let host_path = "/usr/bin:/bin:/usr/local/bin";
 
-        let try_run = |bin: &str| -> Result<(), String> {
+        let toxic_vars = [
+            "LD_LIBRARY_PATH","LD_PRELOAD","APPDIR","APPIMAGE","APPIMAGE_SILENT_INSTALL",
+            "GIO_MODULE_DIR","GTK_PATH","QT_PLUGIN_PATH","QT_QPA_PLATFORM_PLUGIN_PATH",
+            "XDG_DATA_DIRS","XDG_CURRENT_DESKTOP","XDG_SESSION_DESKTOP"
+        ];
+
+        let run_clean = |bin: &str, args: &[&str]| -> Result<(), String> {
             let mut cmd = Command::new(bin);
-            if bin.ends_with("/gio") {
-                cmd.arg("open").arg(&path);
-            } else if bin.ends_with("kioclient5") {
-                cmd.args(["exec", &path]);
-            } else if bin.ends_with("kde-open5") {
-                cmd.arg(&path);
-            } else {
-                cmd.arg(&path); // xdg-open
+            cmd.env_clear();
+            for (k, v) in &whitelist {
+                if !v.is_empty() { cmd.env(k, v); }
             }
-            cmd.env("PATH", host_path);
-
+            for t in toxic_vars {
+                cmd.env_remove(t);
+            }
+            cmd.args(args);
             match cmd.status() {
-                Ok(status) if status.success() => Ok(()),
-                Ok(status) => Err(format!("{bin} exited with code {:?}", status.code())),
+                Ok(s) if s.success() => Ok(()),
+                Ok(s) => Err(format!("{bin} exited with code {:?}", s.code())),
                 Err(e) => Err(format!("spawn {bin} failed: {e}")),
             }
         };
 
         let mut last_err: Option<String> = None;
-        for bin in candidates {
-            match try_run(bin) {
+
+        let try_seq: &[(&str, &[&str])] = if is_dir {
+            &[
+                ("/usr/bin/xdg-open", &[&path]),
+                ("/bin/xdg-open", &[&path]),
+                ("/usr/bin/gio", &["open", &path]),
+                ("/bin/gio", &["open", &path]),
+                ("/usr/bin/kioclient5", &["exec", &path]),
+                ("/usr/bin/kde-open5", &[&path]),
+                ("/usr/bin/exo-open", &["--launch","FileManager", &path]),
+                ("/usr/bin/nautilus", &[&path]),
+                ("/usr/bin/dolphin", &[&path]),
+                ("/usr/bin/thunar", &[&path]),
+                ("/usr/bin/pcmanfm", &[&path]),
+            ]
+        } else {
+            &[
+                ("/usr/bin/xdg-open", &[&path]),
+                ("/bin/xdg-open", &[&path]),
+                ("/usr/bin/gio", &["open", &path]),
+                ("/bin/gio", &["open", &path]),
+                ("/usr/bin/kioclient5", &["exec", &path]),
+                ("/usr/bin/kde-open5", &[&path]),
+            ]
+        };
+
+        for (bin, args) in try_seq {
+            match run_clean(bin, args) {
                 Ok(()) => return Ok(()),
-                Err(e) => last_err = Some(e),
+                Err(e) => { last_err = Some(e); }
             }
         }
         return Err(last_err.unwrap_or_else(|| "no opener matched".into()));
@@ -166,9 +197,7 @@ fn open_path_native(path: String) -> Result<(), String> {
         let status = Command::new("cmd")
             .args(["/C", "start", "", &path])
             .status()
-            .or_else(|_| {
-                Command::new("explorer").arg(&path).status()
-            })
+            .or_else(|_| Command::new("explorer").arg(&path).status())
             .map_err(|e| e.to_string())?;
         if status.success() { Ok(()) } else { Err(format!("open failed {:?}", status.code())) }
     }
