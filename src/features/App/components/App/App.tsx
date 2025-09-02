@@ -1,6 +1,8 @@
+import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
 import { IntlProvider } from "react-intl";
 import { useSelector } from "react-redux";
+import { toast } from "react-toastify";
 import { appInit } from "features/App/state/App.actions";
 import {
 	selectAppInited,
@@ -22,6 +24,8 @@ const App = () => {
 	useEffect(() => {
 		(async () => {
 			await appInit(dispatch, () => store.getState());
+			const diag = await invoke("linux_openers_diag");
+			toast.info(JSON.stringify(diag, null, 2));
 		})();
 	}, [dispatch]);
 

@@ -100,6 +100,33 @@ fn remove_dir(path: String, recursive: bool) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn linux_openers_diag() -> Result<serde_json::Value, String> {
+    #[cfg(not(target_os = "linux"))]
+    { return Ok(serde_json::json!({"platform": "not-linux"})); }
+
+    #[cfg(target_os = "linux")]
+    {
+        use std::process::Command;
+        let path = std::env::var("PATH").unwrap_or_default();
+
+        let which = |bin: &str| {
+            Command::new("sh")
+                .arg("-lc")
+                .arg(format!("command -v {}", bin))
+                .output()
+                .ok()
+                .and_then(|o| if o.status.success() {
+                    Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
+                } else { None })
+        };
+
+        Ok(serde_json::json!({
+            "PATH": path,
+            "xdg_open_found": which("xdg-open"),
+        }))
+    }
+}
 
 /* ---------- run Tauri ---------- */
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -128,7 +155,8 @@ pub fn run() {
             run_decrypt,
             run_container_info,
             container_info_once,
-            run_reseal
+            run_reseal,
+            linux_openers_diag,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
