@@ -1,5 +1,6 @@
 use once_cell::sync::Lazy;
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::process::Command;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_single_instance;
 use tauri_plugin_fs;
@@ -101,30 +102,75 @@ fn remove_dir(path: String, recursive: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn linux_openers_diag() -> Result<serde_json::Value, String> {
-    #[cfg(not(target_os = "linux"))]
-    { return Ok(serde_json::json!({"platform": "not-linux"})); }
+fn open_path_native(path: String) -> Result<(), String> {
+    use std::path::Path;
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Err(format!("Path does not exist: {}", path));
+    }
 
     #[cfg(target_os = "linux")]
     {
-        use std::process::Command;
-        let path = std::env::var("PATH").unwrap_or_default();
+        // absolute paths to «host» binaries + PATH forcibly
+        let candidates = [
+            "/usr/bin/xdg-open",
+            "/bin/xdg-open",
+            "/usr/bin/gio",
+            "/bin/gio",
+            "/usr/bin/kioclient5",
+            "/usr/bin/kde-open5",
+        ];
+        let host_path = "/usr/bin:/bin:/usr/local/bin";
 
-        let which = |bin: &str| {
-            Command::new("sh")
-                .arg("-lc")
-                .arg(format!("command -v {}", bin))
-                .output()
-                .ok()
-                .and_then(|o| if o.status.success() {
-                    Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
-                } else { None })
+        let try_run = |bin: &str| -> Result<(), String> {
+            let mut cmd = Command::new(bin);
+            if bin.ends_with("/gio") {
+                cmd.arg("open").arg(&path);
+            } else if bin.ends_with("kioclient5") {
+                cmd.args(["exec", &path]);
+            } else if bin.ends_with("kde-open5") {
+                cmd.arg(&path);
+            } else {
+                cmd.arg(&path); // xdg-open
+            }
+            cmd.env("PATH", host_path);
+
+            match cmd.status() {
+                Ok(status) if status.success() => Ok(()),
+                Ok(status) => Err(format!("{bin} exited with code {:?}", status.code())),
+                Err(e) => Err(format!("spawn {bin} failed: {e}")),
+            }
         };
 
-        Ok(serde_json::json!({
-            "PATH": path,
-            "xdg_open_found": which("xdg-open"),
-        }))
+        let mut last_err: Option<String> = None;
+        for bin in candidates {
+            match try_run(bin) {
+                Ok(()) => return Ok(()),
+                Err(e) => last_err = Some(e),
+            }
+        }
+        return Err(last_err.unwrap_or_else(|| "no opener matched".into()));
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .arg(&path)
+            .status()
+            .map_err(|e| e.to_string())
+            .and_then(|s| if s.success() { Ok(()) } else { Err(format!("open exited {:?}", s.code())) })
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let status = Command::new("cmd")
+            .args(["/C", "start", "", &path])
+            .status()
+            .or_else(|_| {
+                Command::new("explorer").arg(&path).status()
+            })
+            .map_err(|e| e.to_string())?;
+        if status.success() { Ok(()) } else { Err(format!("open failed {:?}", status.code())) }
     }
 }
 
@@ -156,7 +202,7 @@ pub fn run() {
             run_container_info,
             container_info_once,
             run_reseal,
-            linux_openers_diag,
+            open_path_native
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

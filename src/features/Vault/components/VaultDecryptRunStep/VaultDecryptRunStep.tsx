@@ -1,4 +1,3 @@
-import { openPath } from "@tauri-apps/plugin-opener";
 import { Store } from "@tauri-apps/plugin-store";
 import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
@@ -7,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { RouteTypes } from "interfaces";
 import { createAsyncOnceGuard, devError, devLog, useRequestGuard } from "utils";
+import { openPathUniversal } from "utils";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UISectionHeading } from "features/UI";
 import { icons } from "assets";
@@ -291,7 +291,7 @@ const VaultDecryptRunStep = () => {
 			(async () => {
 				if (savedMountDir) {
 					try {
-						await openPath(savedMountDir);
+						await openPathUniversal(savedMountDir);
 					} catch (e) {
 						devError(e);
 					}
@@ -379,7 +379,7 @@ const VaultDecryptRunStep = () => {
 	const openMountFolder = async () => {
 		if (!savedMountDir) return;
 		try {
-			await openPath(savedMountDir);
+			await openPathUniversal(savedMountDir);
 		} catch (e) {
 			devError(e);
 			toast.error(formatMessage({ id: "common.openFolderError" }));

@@ -1,4 +1,3 @@
-import { openPath } from "@tauri-apps/plugin-opener";
 import { Store } from "@tauri-apps/plugin-store";
 import { useState } from "react";
 import { useIntl } from "react-intl";
@@ -7,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useEffectOnce } from "react-use";
 import { RouteTypes } from "interfaces";
-import { devError, devLog } from "utils";
+import { devError, devLog, openPathUniversal } from "utils";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UISectionHeading } from "features/UI";
 import { icons } from "assets";
@@ -182,7 +181,7 @@ const VaultEncryptRunStep = () => {
 	const openFileFolder = async () => {
 		if (!savedSharePath) return;
 		try {
-			await openPath(savedSharePath);
+			await openPathUniversal(savedSharePath);
 		} catch (e) {
 			devError(e);
 			toast.error(formatMessage({ id: "common.openFolderError" }));

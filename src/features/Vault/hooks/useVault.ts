@@ -1,14 +1,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { tempDir } from "@tauri-apps/api/path";
 import { BaseDirectory, remove } from "@tauri-apps/plugin-fs";
-import { openPath } from "@tauri-apps/plugin-opener";
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { RouteTypes } from "interfaces";
-import { devError, devLog } from "utils";
+import { devError, devLog, openPathUniversal } from "utils";
 import { useAppDispatch } from "features/Store";
 import { useContainerInfo, useReseal } from "features/Vault/hooks";
 import {
@@ -36,7 +35,7 @@ export const useVault = (
 
 	const handleOpenFolder = useCallback(async (mountDir: string) => {
 		try {
-			await openPath(mountDir);
+			await openPathUniversal(mountDir);
 		} catch (e) {
 			devError(e);
 		}
