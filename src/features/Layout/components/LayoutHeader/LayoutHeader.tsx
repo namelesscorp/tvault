@@ -1,37 +1,74 @@
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { UIImgIcon } from "features/UI";
+import { useIntl } from "react-intl";
+import { useTheme } from "features/Theme";
+import { UIButton, UIImgIcon } from "features/UI";
 import { icons } from "assets";
+import logo from "assets/images/logo.svg";
 
 const appWindow = getCurrentWebviewWindow();
 
-const LayoutHeader = () => (
-	<div
-		className="flex items-center justify-between h-[70px] pl-[25px] pr-[15px] border-b border-white/10"
-		data-tauri-drag-region>
-		<p className="text-white italic font-extrabold text-[22px] leading-[27px] tracking-[-0.05em] pointer-events-none">
-			TRUST VAULT{" "}
-			<span className="font-medium text-white/25">(Beta)</span>
-		</p>
-		<div className="relative">
-			<UIImgIcon
-				icon={icons.minus}
-				color="#ffffff"
-				width={35}
-				height={35}
-				style={{ position: "absolute", top: 8, right: 45 }}
-				pointer
-				onClick={() => appWindow.minimize()}
-			/>
-			<UIImgIcon
-				icon={icons.close}
-				color="#ffffff"
-				width={35}
-				height={35}
-				pointer
-				onClick={() => appWindow.close()}
-			/>
+const LayoutHeader = () => {
+	const { formatMessage } = useIntl();
+	const { resolved } = useTheme();
+
+	return (
+		<div>
+			<div
+				className="flex items-center justify-end p-[5px]"
+				data-tauri-drag-region>
+				<UIImgIcon
+					icon={icons.minus}
+					color={resolved === "dark" ? "#ffffff" : "#000000"}
+					width={35}
+					height={35}
+					style={{ position: "absolute", top: 8, right: 45 }}
+					pointer
+					onClick={() => appWindow.minimize()}
+				/>
+				<UIImgIcon
+					icon={icons.close}
+					color={resolved === "dark" ? "#ffffff" : "#000000"}
+					width={35}
+					height={35}
+					pointer
+					onClick={() => appWindow.close()}
+				/>
+			</div>
+			<div className="flex items-center justify-between px-[40px]">
+				<div className="flex items-center gap-[20px] pointer-events-none">
+					<img src={logo} alt="logo" />
+					<div className="flex flex-col gap-[5px]">
+						<h1 className="text-[32px] font-extrabold leading-[39px] tracking-[-0.05em] text-primary-fg">
+							Trust Vault
+						</h1>
+						<p className="text-[16px] font-medium leading-[20px] tracking-[-0.05em] text-secondary-fg">
+							{formatMessage({ id: "header.subtitle" })}
+						</p>
+					</div>
+				</div>
+				<div className="flex items-center gap-[30px]">
+					<UIButton
+						icon={icons.settings}
+						text={formatMessage({ id: "common.settings" })}
+					/>
+					<UIButton
+						icon={icons.folder}
+						text={formatMessage({ id: "header.open" })}
+					/>
+					<UIButton
+						icon={icons.plus}
+						text={formatMessage({ id: "header.create" })}
+						style={{
+							background:
+								"linear-gradient(90deg, #2C60EA 0%, #9034EA 100%)",
+							color: "#ffffff",
+						}}
+						noTheme
+					/>
+				</div>
+			</div>
 		</div>
-	</div>
-);
+	);
+};
 
 export { LayoutHeader };

@@ -27,17 +27,39 @@
 	"common.openFolder": "Открыть папку",
 	"common.openFolderError": "Не удалось открыть папку",
 	"common.copied": "Скопировано в буфер обмена",
+	"common.settings": "Настройки",
+
+	"header.subtitle": "Управление зашифрованным хранилищем",
+	"header.create": "Создать сейф",
+	"header.open": "Открыть сейф",
 
 	"menu.dashboard": "Управление",
 	"menu.create": "Создать",
 	"menu.open": "Открыть",
+
+	"stats.1": "Количество сейфов",
+	"stats.2": "Количество файлов",
+	"stats.3": "Общий размер",
+	"stats.4": "Оценка безопасности",
+
+	"filters.search": "Поиск сейфов по имени и тегам (Ctrl + K)",
+	"filters.all": "Все",
+	"filters.locked": "Закрытые",
+	"filters.unlocked": "Открытые",
 
 	"title.create": "Создание",
 	"title.open": "Открытие",
 
 	"dashboard.containers": "Контейнеры",
 	"dashboard.loading": "Загрузка информации о контейнерах... ({count} осталось)",
-	"dashboard.notFound": "Контейнеры не найдены",
+	"dashboard.notFound": "Сейфы не найдены",
+	"dashboard.notFoundDescription": "Попробуйте изменить критерии поиска или фильтра",
+	"dashboard.info.files": "Файлы",
+	"dashboard.info.size": "Размер",
+	"dashboard.info.unlock": "Открыть сейф",
+	"dashboard.info.browse": "Обзор",
+	"dashboard.info.lock": "Закрыть",
+	"dashboard.info.lastAccessed": "Последнее использование",
 
 	"container.container": "Контейнер",
 	"container.openFolder": "Открыть папку",

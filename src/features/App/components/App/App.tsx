@@ -1,8 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
 import { IntlProvider } from "react-intl";
 import { useSelector } from "react-redux";
-import { toast } from "react-toastify";
+import { ToastContainer } from "react-toastify";
 import { appInit } from "features/App/state/App.actions";
 import {
 	selectAppInited,
@@ -15,17 +14,17 @@ import {
 import { Router } from "features/Router";
 import { useAppDispatch } from "features/Store";
 import { store } from "features/Store";
+import { useTheme } from "features/Theme";
 
 const App = () => {
 	const dispatch = useAppDispatch();
 	const appInited = useSelector(selectAppInited);
 	const locale = useSelector(selectAppLocale);
+	const { resolved } = useTheme();
 
 	useEffect(() => {
 		(async () => {
 			await appInit(dispatch, () => store.getState());
-			const diag = await invoke("linux_openers_diag");
-			toast.info(JSON.stringify(diag, null, 2));
 		})();
 	}, [dispatch]);
 
@@ -40,6 +39,7 @@ const App = () => {
 			defaultLocale={DEFAULT_LOCALE}
 			messages={getLocalizationFiles()[locale]}>
 			<Router />
+			<ToastContainer theme={resolved} />
 		</IntlProvider>
 	);
 };

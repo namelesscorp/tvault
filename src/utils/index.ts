@@ -13,3 +13,4 @@ export * from "./hooks";
 export * from "./localization";
 export * from "./error";
 export * from "./file";
+export * from "./theme";

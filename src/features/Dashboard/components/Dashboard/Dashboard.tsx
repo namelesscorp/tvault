@@ -10,9 +10,12 @@ import {
 	shouldRemoveContainerOnError,
 	useRequestGuard,
 } from "utils";
+import { Filters } from "features/Filters";
 import { LocalizationTypes, useLocale } from "features/Localization";
+import { Stats } from "features/Stats";
 import { useAppDispatch } from "features/Store";
-import { UIContainerRow, UISectionHeading } from "features/UI";
+import { useTheme } from "features/Theme";
+import { UIContainerRow, UIImgIcon } from "features/UI";
 import { useContainerInfo, useVault } from "features/Vault/hooks";
 import {
 	vaultRemoveRecent,
@@ -24,8 +27,9 @@ import {
 	selectVaultContainers,
 	selectVaultRecent,
 } from "features/Vault/state/Vault.selectors";
-import { icons } from "assets";
+import { icons } from "assets/collections/icons";
 import { DashboardContainerInfo } from "../DashboardContainerInfo";
+import { DashboardContainerItem } from "../DashboardContainerItem";
 
 const Dashboard = () => {
 	const { formatMessage } = useIntl();
@@ -40,6 +44,7 @@ const Dashboard = () => {
 		done: infoDone,
 	} = useContainerInfo();
 	const { locale } = useLocale();
+	const { resolved } = useTheme();
 
 	const { fn: guardedFetchInfo } = useRequestGuard(fetchInfo);
 
@@ -309,22 +314,88 @@ const Dashboard = () => {
 		}
 	}, [infoDone, infoResult, infoError, dispatch]);
 
-	if (!hasContainers) {
-		return (
-			<section>
-				<p className="text-[20px] text-white/50 text-center">
-					{formatMessage({ id: "dashboard.notFound" })}
-				</p>
-			</section>
-		);
-	}
-
+	console.log(containerEntries);
 	return (
-		<section className="flex flex-col gap-[20px]">
-			<UISectionHeading
-				icon={icons.folder}
-				text={formatMessage({ id: "dashboard.containers" })}
-			/>
+		<section className="flex flex-col px-[40px]">
+			<div className="py-[20px]">
+				<Stats />
+			</div>
+			<div className="py-[20px]">
+				<Filters />
+			</div>
+			{!hasContainers && (
+				<div
+					className={cn(
+						"flex flex-col items-center justify-center gap-[10px] m-auto w-[450px] h-[300px] rounded-[10px] border",
+						{
+							"bg-[#ffffff]/3": resolved === "dark",
+							"bg-[#ffffff]/80": resolved === "light",
+							"border-[#313A4F]": resolved === "dark",
+							"border-black/70": resolved === "light",
+							"card-shadow": resolved === "light",
+						},
+					)}>
+					<div
+						className={cn(
+							"flex items-center justify-center w-[65px] h-[65px] rounded-full",
+							{
+								"bg-[#1D273E]": resolved === "dark",
+								"bg-[#F5F7FF]": resolved === "light",
+							},
+						)}>
+						<UIImgIcon
+							icon={icons.lock}
+							width={30}
+							height={30}
+							color={resolved === "dark" ? "#60A5FA" : "#2463EB"}
+						/>
+					</div>
+					<p
+						className={cn(
+							"text-[24px] font-bold tracking-[-0.05em]",
+							{
+								"text-white": resolved === "dark",
+								"text-black/80": resolved === "light",
+							},
+						)}>
+						{formatMessage({ id: "dashboard.notFound" })}
+					</p>
+					<p
+						className={cn(
+							"text-[16px] font-medium tracking-[-0.05em]",
+							{
+								"text-white/70": resolved === "dark",
+								"text-black/70": resolved === "light",
+							},
+						)}>
+						{formatMessage({ id: "dashboard.notFoundDescription" })}
+					</p>
+				</div>
+			)}
+			{hasContainers && (
+				<div className="grid gap-[20px] grid-cols-3 h-[429px] pt-[15px] pb-[35px] overflow-y-auto scrollbar-hide">
+					{containerEntries.map(([containerPath, mountDir]) => (
+						<DashboardContainerItem
+							path={containerPath}
+							mountDir={mountDir}
+							info={infoMap[containerPath]}
+							isOpened={true}
+							savedMountPath={mountDir}
+							key={containerPath}
+						/>
+					))}
+					{recentClosed.map(r => (
+						<DashboardContainerItem
+							path={r.path}
+							mountDir={""}
+							info={infoMap[r.path]}
+							isOpened={false}
+							savedMountPath={r.lastMountPath}
+							key={r.path}
+						/>
+					))}
+				</div>
+			)}
 			<div
 				className={cn(
 					"grid gap-[20px] items-start",

@@ -1,10 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
-import { ToastContainer } from "react-toastify";
 import { App } from "features/App";
 import { environmentEnv, environmentVersion } from "features/Environment";
 import { store } from "features/Store";
+import { ThemeProvider } from "features/Theme";
 import "assets/fonts/Inter/inter.css";
 import "./index.css";
 
@@ -16,8 +16,9 @@ console.info(
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
 		<Provider store={store}>
-			<App />
-			<ToastContainer theme="dark" />
+			<ThemeProvider>
+				<App />
+			</ThemeProvider>
 		</Provider>
 	</StrictMode>,
 );

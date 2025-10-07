@@ -15,7 +15,7 @@ const UIImgIcon = ({
 	return (
 		<div
 			{...props}
-			className={`mask-contain mask-no-repeat ${pointer ? "cursor-pointer" : ""}`}
+			className={`mask-contain mask-no-repeat transition-all duration-300 ${pointer ? "cursor-pointer" : ""}`}
 			style={{
 				width: `${width}px`,
 				height: `${height}px`,

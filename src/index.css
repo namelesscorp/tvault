@@ -33,3 +33,46 @@ body {
 	height: 100%;
 	background-color: transparent;
 }
+
+@layer base {
+	/* Theme tokens */
+	:root {
+		/* defaults to avoid FOUC before JS applies .light/.dark */
+		--primary: 0 0% 0% / 0.9;
+		--primary-fg: 0 0% 100% / 1;
+		--secondary: 0 0% 0% / 0.7;
+		--secondary-fg: 0 0% 100% / 0.9;
+	}
+
+	:root.light {
+		/* backgrounds (temporary contrasting choices) */
+		--primary: 0 0% 100% / 1; /* white 100% */
+		--secondary: 0 0% 0% / 0.06; /* subtle dark overlay */
+
+		/* text */
+		--primary-fg: 0 0% 0% / 0.8; /* black 80% */
+		--secondary-fg: 0 0% 0% / 0.7; /* black 70% */
+	}
+
+	:root.dark {
+		/* backgrounds (temporary contrasting choices) */
+		--primary: 0 0% 0% / 0.92; /* near black */
+		--secondary: 0 0% 100% / 0.1; /* subtle light overlay */
+
+		/* text */
+		--primary-fg: 0 0% 100% / 1; /* white 100% */
+		--secondary-fg: 0 0% 100% / 0.9; /* white 90% */
+	}
+}
+
+/* Tailwind v4 theme tokens for scalable color usage */
+@theme {
+	--color-primary: hsl(var(--primary));
+	--color-primary-fg: hsl(var(--primary-fg));
+	--color-secondary: hsl(var(--secondary));
+	--color-secondary-fg: hsl(var(--secondary-fg));
+}
+
+.card-shadow {
+	box-shadow: 0px 5px 5px 2px rgba(0, 0, 0, 0.1);
+}
