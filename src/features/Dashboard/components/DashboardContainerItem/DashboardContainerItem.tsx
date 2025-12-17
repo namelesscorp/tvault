@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { useIntl } from "react-intl";
+import { ContainerInfoData } from "interfaces";
 import { cn } from "utils";
 import { useTheme } from "features/Theme";
 import { UIButton, UIImgIcon } from "features/UI";
+import { useVault } from "features/Vault/hooks/useVault";
 import { icons } from "assets/collections/icons";
-import { ContainerInfoData } from "~/interfaces";
 import { DashboardContainerItemTag } from "../DashboardContainerItemTag";
 
 const DashboardContainerItem = ({
@@ -22,6 +23,7 @@ const DashboardContainerItem = ({
 }) => {
 	const { resolved } = useTheme();
 	const { formatMessage } = useIntl();
+	const { handleOpenClosedContainer } = useVault();
 
 	const securityTags = useMemo(() => {
 		const tags = [];
@@ -228,7 +230,7 @@ const DashboardContainerItem = ({
 								resolved === "dark" ? "#2463EB" : "#3A73ED",
 							color: "#ffffff",
 						}}
-						onClick={() => {}}
+						onClick={() => handleOpenClosedContainer(path)}
 					/>
 				</div>
 			)}

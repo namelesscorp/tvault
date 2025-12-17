@@ -20,6 +20,7 @@ import grid from "./grid.svg";
 import grid_2 from "./grid_2.svg";
 import help_circle from "./help_circle.svg";
 import key from "./key.svg";
+import key_2 from "./key_2.svg";
 import lock from "./lock.svg";
 import minus from "./minus.svg";
 import pencil from "./pencil.svg";
@@ -31,9 +32,11 @@ import settings from "./settings.svg";
 import shield from "./shield.svg";
 import shield_2 from "./shield_2.svg";
 import unlock from "./unlock.svg";
+import file_attachment from "./file_attachment.svg";
 
 const icons = {
 	grid,
+	key_2,
 	lock,
 	unlock,
 	folder,
@@ -66,6 +69,7 @@ const icons = {
 	key,
 	shield_2,
 	calendar,
+	file_attachment,
 };
 
 export { icons };

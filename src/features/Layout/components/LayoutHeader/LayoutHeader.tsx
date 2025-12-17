@@ -4,12 +4,23 @@ import { useTheme } from "features/Theme";
 import { UIButton, UIImgIcon } from "features/UI";
 import { icons } from "assets";
 import logo from "assets/images/logo.svg";
+import { modalSetIcon, modalSetOpen, modalSetTitle, modalSetType } from "features/Modal/state/Modal.actions";
+import { ModalTypes } from "features/Modal/Modal.model";
+import { useAppDispatch } from "features/Store";
 
 const appWindow = getCurrentWebviewWindow();
 
 const LayoutHeader = () => {
+	const dispatch = useAppDispatch();
 	const { formatMessage } = useIntl();
 	const { resolved } = useTheme();
+
+	const handleAdd = () => {
+		dispatch(modalSetType(ModalTypes.ADD));
+		dispatch(modalSetOpen(true));
+		dispatch(modalSetTitle(formatMessage({ id: "modal.add" })));
+		dispatch(modalSetIcon(icons.folder_shield));
+	};
 
 	return (
 		<div>
@@ -54,6 +65,7 @@ const LayoutHeader = () => {
 					<UIButton
 						icon={icons.folder}
 						text={formatMessage({ id: "header.open" })}
+						onClick={handleAdd}
 					/>
 					<UIButton
 						icon={icons.plus}

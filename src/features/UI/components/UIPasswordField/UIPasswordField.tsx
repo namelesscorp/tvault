@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { icons } from "assets";
 import { UIInput } from "../UIInput";
+import { useTheme } from "features/Theme";
+import { cn } from "utils";
 
 export interface UIPasswordFieldProps {
 	value: string;
@@ -21,6 +23,7 @@ const UIPasswordField = ({
 	disabled,
 }: UIPasswordFieldProps) => {
 	const [show, setShow] = useState(false);
+	const {resolved} = useTheme();
 
 	return (
 		<div className="relative" style={style}>
@@ -36,7 +39,12 @@ const UIPasswordField = ({
 			<button
 				type="button"
 				onClick={() => setShow(!show)}
-				className="absolute right-[10px] top-1/2 transform -translate-y-1/2 w-[30px] h-[30px] flex items-center justify-center cursor-pointer mask-size-[20px] bg-black hover:bg-black/80 transition-all duration-300 rounded-[10px]"
+				className={cn("absolute right-[10px] top-1/2 transform -translate-y-1/2 w-[30px] h-[30px] flex items-center justify-center cursor-pointer mask-size-[20px] transition-all duration-300 rounded-[10px]", {
+					"bg-white": resolved === "dark",
+					"bg-black": resolved === "light",
+					"hover:bg-white/80": resolved === "dark",
+					"hover:bg-black/80": resolved === "light",
+				})}
 				style={{
 					WebkitMask: `url("${show ? icons.eye_off : icons.eye}") no-repeat center`,
 					mask: `url("${show ? icons.eye_off : icons.eye}") no-repeat center`,

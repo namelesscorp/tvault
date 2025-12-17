@@ -11,6 +11,7 @@ import {
 	DEFAULT_LOCALE,
 	getLocalizationFiles,
 } from "features/Localization/Localization.model";
+import { Modal } from "features/Modal";
 import { Router } from "features/Router";
 import { useAppDispatch } from "features/Store";
 import { store } from "features/Store";
@@ -39,6 +40,7 @@ const App = () => {
 			defaultLocale={DEFAULT_LOCALE}
 			messages={getLocalizationFiles()[locale]}>
 			<Router />
+			<Modal />
 			<ToastContainer theme={resolved} />
 		</IntlProvider>
 	);

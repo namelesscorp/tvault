@@ -4,10 +4,15 @@ import { BaseDirectory, remove } from "@tauri-apps/plugin-fs";
 import { useCallback } from "react";
 import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { RouteTypes } from "interfaces";
 import { devError, devLog, openPathUniversal } from "utils";
+import { ModalTypes } from "features/Modal/Modal.model";
+import {
+	modalSetIcon,
+	modalSetOpen,
+	modalSetTitle,
+	modalSetType,
+} from "features/Modal/state/Modal.actions";
 import { useAppDispatch } from "features/Store";
 import { useContainerInfo, useReseal } from "features/Vault/hooks";
 import {
@@ -20,13 +25,13 @@ import {
 	selectVaultContainerInfo,
 	selectVaultRecent,
 } from "features/Vault/state/Vault.selectors";
+import { icons } from "assets/collections/icons";
 import { ResealData } from "../Vault.model";
 
 export const useVault = (
 	onContainerClose?: (containerPath: string) => void,
 ) => {
 	const dispatch = useAppDispatch();
-	const navigate = useNavigate();
 	const infoMap = useSelector(selectVaultContainerInfo);
 	const recent = useSelector(selectVaultRecent);
 	const { run: runReseal } = useReseal();
@@ -278,9 +283,12 @@ export const useVault = (
 				} as any),
 			);
 
-			navigate(RouteTypes.VaultOpenContainer);
+			dispatch(modalSetTitle(formatMessage({ id: "modal.unlock" })));
+			dispatch(modalSetIcon(icons.folder_shield));
+			dispatch(modalSetType(ModalTypes.OPEN));
+			dispatch(modalSetOpen(true));
 		},
-		[dispatch, navigate, infoMap, recent],
+		[dispatch, infoMap, recent, formatMessage],
 	);
 
 	return {

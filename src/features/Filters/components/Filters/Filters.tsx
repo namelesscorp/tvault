@@ -16,7 +16,7 @@ const Filters = () => {
 	const dispatch = useAppDispatch();
 
 	return (
-		<div className="flex items-center gap-[30px]">
+		<div className="flex items-center gap-[20px]">
 			<div
 				className={cn(
 					"flex items-center flex-1 gap-[15px] h-[40px] rounded-[10px] px-[15px] border",
@@ -39,7 +39,7 @@ const Filters = () => {
 					type="text"
 					placeholder={formatMessage({ id: "filters.search" })}
 					className={cn(
-						"flex-1 bg-transparent outline-none text-[16px] text-medium",
+						"flex-1 bg-transparent outline-none text-[16px] font-medium",
 						{
 							"placeholder:text-white/70": resolved === "dark",
 							"placeholder:text-black/70": resolved === "light",

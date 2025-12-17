@@ -43,7 +43,7 @@
 	"stats.4": "Security score",
 
 	"filters.search": "Search vaults by name or tags... (Ctrl + K)",
-	"filters.all": "Все",
+	"filters.all": "All",
 	"filters.locked": "Locked",
 	"filters.unlocked": "Unlocked",
 
@@ -216,5 +216,31 @@
 	"settings.updateNotDownloaded": "Update must be downloaded before installation",
 	"settings.updateDownloadFailed": "Failed to download update",
 	"settings.updateInstallFailed": "Failed to install update",
-	"settings.resetUpdate": "Reset"
+	"settings.resetUpdate": "Reset",
+
+	"modal.unlock": "Unlock vault",
+	"modal.add": "Add vault",
+
+	"modal.open.info.title.master": "Master key",
+	"modal.open.info.title.share": "Shamir’s Secret Sharing",
+	"modal.open.info.title.none": "User password",
+	"modal.open.info.description.master": "Enter the required master token to reconstruct the key",
+	"modal.open.info.description.share": "Enter the required share tokens to reconstruct the key",
+	"modal.open.info.description.none": "Enter the required password to reconstruct the key",
+	"modal.open.title.none": "Password",
+	"modal.open.title.share": "Share tokens",
+	"modal.open.title.master": "Master token",
+	"modal.open.placeholder.none": "Enter password",
+	"modal.open.placeholder.share": "Enter share #{index}",
+	"modal.open.placeholder.master": "Enter master token",
+	"modal.open.title.hmac": "Integrity password (HMAC)",
+	"modal.open.placeholder.hmac": "Enter integrity password",
+	"modal.open.bottom.text": "All decryption happens locally on your device",
+
+	"modal.add.info.title": "Select a vault container file for add to dashboard or unlock",
+	"modal.add.file.title": "Vault file selection",
+	"modal.add.file.description.1": "Choose an existing",
+	"modal.add.file.description.2": "container file from your system to add to dashboard",
+	"modal.add.file.input.title": "Container file path",
+	"modal.add.file.input.placeholder": "Select vault file"
 }
