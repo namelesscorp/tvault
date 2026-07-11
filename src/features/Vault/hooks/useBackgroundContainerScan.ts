@@ -7,18 +7,18 @@ import { useAppDispatch } from "features/Store";
 import {
 	cleanupNonExistentContainers,
 	isContainerAccessible,
-	vaultScanContainersDirectory,
+	vaultScanAllContainersDirectories,
 } from "../state/Vault.actions";
 import { vaultRemoveRecent } from "../state/Vault.actions";
 import {
-	selectVaultContainersPath,
+	selectVaultContainersPaths,
 	selectVaultRecent,
 } from "../state/Vault.selectors";
 
 export const useBackgroundContainerScan = () => {
 	const location = useLocation();
 	const dispatch = useAppDispatch();
-	const containersPath = useSelector(selectVaultContainersPath);
+	const containersPaths = useSelector(selectVaultContainersPaths);
 	const recent = useSelector(selectVaultRecent);
 	const isScanningRef = useRef(false);
 	const lastScanTimeRef = useRef<number>(0);
@@ -37,8 +37,8 @@ export const useBackgroundContainerScan = () => {
 			return;
 		}
 
-		if (!containersPath) {
-			devLog("[BackgroundScan] No containers path set, skipping scan");
+		if (!containersPaths.length) {
+			devLog("[BackgroundScan] No containers paths set, skipping scan");
 			return;
 		}
 
@@ -51,7 +51,9 @@ export const useBackgroundContainerScan = () => {
 			try {
 				await cleanupNonExistentContainers(dispatch);
 
-				await dispatch(vaultScanContainersDirectory(containersPath));
+				await dispatch(
+					vaultScanAllContainersDirectories(containersPaths),
+				);
 
 				if (recent.length > 0) {
 					devLog(
@@ -99,5 +101,5 @@ export const useBackgroundContainerScan = () => {
 		};
 
 		performBackgroundScan();
-	}, [location.pathname, containersPath, recent, dispatch]);
+	}, [location.pathname, containersPaths, recent, dispatch]);
 };

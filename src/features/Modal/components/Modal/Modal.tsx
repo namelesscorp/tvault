@@ -12,8 +12,9 @@ import {
 	selectModalTitle,
 	selectModalType,
 } from "../../state/Modal.selectors";
-import { ModalOpen } from "../ModalOpen";
 import { ModalAdd } from "../ModalAdd";
+import { ModalOpen } from "../ModalOpen";
+import { ModalSettings } from "../ModalSettings";
 
 const Modal = () => {
 	const dispatch = useAppDispatch();
@@ -28,13 +29,20 @@ const Modal = () => {
 		return null;
 	}
 
+	if (modalType === ModalTypes.SETTINGS) {
+		return <ModalSettings />;
+	}
+
 	return (
 		<div className="fixed top-0 left-0 w-full h-full flex items-center justify-center backdrop-blur-sm rounded-[10px]">
 			<div
-				className={cn("w-[500px] max-h-[90vh] rounded-[10px] flex flex-col", {
-					"bg-[#1E293B]": resolved === "dark",
-					"bg-[#F5F7FF]": resolved === "light",
-				})}>
+				className={cn(
+					"w-[500px] max-h-[90vh] rounded-[10px] flex flex-col",
+					{
+						"bg-[#1E293B]": resolved === "dark",
+						"bg-[#F5F7FF]": resolved === "light",
+					},
+				)}>
 				<div className="flex items-center justify-between px-[15px] pt-[20px] pb-[22px]">
 					<div className="flex items-center gap-[10px]">
 						<div
@@ -55,10 +63,13 @@ const Modal = () => {
 							/>
 						</div>
 						<p
-							className={cn("text-[24px] font-bold tracking-[-0.05em]", {
-								"text-white": resolved === "dark",
-								"text-black/80": resolved === "light",
-							})}>
+							className={cn(
+								"text-[24px] font-bold tracking-[-0.05em]",
+								{
+									"text-white": resolved === "dark",
+									"text-black/80": resolved === "light",
+								},
+							)}>
 							{modalTitle}
 						</p>
 					</div>

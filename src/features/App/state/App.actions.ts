@@ -13,7 +13,7 @@ import { vaultSetRecent } from "features/Vault/state/Vault.actions";
 import {
 	cleanupNonExistentContainers,
 	loadVaultSettingsFromCache,
-	vaultScanContainersDirectory,
+	vaultScanAllContainersDirectories,
 } from "features/Vault/state/Vault.actions";
 import { appSlice } from "./App.reducer";
 import { selectAppInited } from "./App.selectors";
@@ -72,19 +72,22 @@ const appInitImpl = async (dispatch: AppDispatch, getState: AppGetState) => {
 			devError("Failed to load recent containers", e);
 		}
 
-		// scan containers directory if path is set (after loading from store)
+		// scan containers directories if any path is set (after loading from store)
 		try {
 			const state = getState() as any;
-			const containersPath = state.vault?.containersPath;
-			devInfo("Checking containers path for scanning:", containersPath);
-			if (containersPath) {
+			const containersPaths: string[] =
+				state.vault?.containersPaths ?? [];
+			devInfo("Checking containers paths for scanning:", containersPaths);
+			if (containersPaths.length > 0) {
 				devInfo("Starting scan during app initialization");
-				await dispatch(vaultScanContainersDirectory(containersPath));
+				await dispatch(
+					vaultScanAllContainersDirectories(containersPaths),
+				);
 			} else {
-				devInfo("No containers path set, skipping scan");
+				devInfo("No containers paths set, skipping scan");
 			}
 		} catch (e) {
-			devError("Failed to scan containers directory", e);
+			devError("Failed to scan containers directories", e);
 		}
 
 		// cleanup non-existent containers on startup

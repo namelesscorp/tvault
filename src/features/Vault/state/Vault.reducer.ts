@@ -48,7 +48,7 @@ const initialState: VaultSlice = {
 	recent: [],
 	containerInfo: {},
 	resealData: [],
-	containersPath: "",
+	containersPaths: [],
 };
 
 export const vaultSlice = createSlice({
@@ -202,8 +202,24 @@ export const vaultSlice = createSlice({
 		vaultClearResealData: state => {
 			state.resealData = [];
 		},
-		vaultSetContainersPath: (state, { payload }: PayloadAction<string>) => {
-			state.containersPath = payload;
+		vaultSetContainersPaths: (
+			state,
+			{ payload }: PayloadAction<string[]>,
+		) => {
+			state.containersPaths = Array.from(new Set(payload));
+		},
+		vaultAddContainersPath: (state, { payload }: PayloadAction<string>) => {
+			if (!state.containersPaths.includes(payload)) {
+				state.containersPaths.push(payload);
+			}
+		},
+		vaultRemoveContainersPath: (
+			state,
+			{ payload }: PayloadAction<string>,
+		) => {
+			state.containersPaths = state.containersPaths.filter(
+				p => p !== payload,
+			);
 		},
 	},
 });
@@ -230,7 +246,9 @@ export const {
 	vaultAddResealData,
 	vaultRemoveResealData,
 	vaultClearResealData,
-	vaultSetContainersPath,
+	vaultSetContainersPaths,
+	vaultAddContainersPath,
+	vaultRemoveContainersPath,
 } = vaultSlice.actions;
 
 export const vaultReducer = vaultSlice.reducer;

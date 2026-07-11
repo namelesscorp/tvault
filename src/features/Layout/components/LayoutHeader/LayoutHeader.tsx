@@ -1,12 +1,17 @@
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useIntl } from "react-intl";
+import { ModalTypes } from "features/Modal/Modal.model";
+import {
+	modalSetIcon,
+	modalSetOpen,
+	modalSetTitle,
+	modalSetType,
+} from "features/Modal/state/Modal.actions";
+import { useAppDispatch } from "features/Store";
 import { useTheme } from "features/Theme";
 import { UIButton, UIImgIcon } from "features/UI";
 import { icons } from "assets";
 import logo from "assets/images/logo.svg";
-import { modalSetIcon, modalSetOpen, modalSetTitle, modalSetType } from "features/Modal/state/Modal.actions";
-import { ModalTypes } from "features/Modal/Modal.model";
-import { useAppDispatch } from "features/Store";
 
 const appWindow = getCurrentWebviewWindow();
 
@@ -20,6 +25,11 @@ const LayoutHeader = () => {
 		dispatch(modalSetOpen(true));
 		dispatch(modalSetTitle(formatMessage({ id: "modal.add" })));
 		dispatch(modalSetIcon(icons.folder_shield));
+	};
+
+	const handleSettings = () => {
+		dispatch(modalSetType(ModalTypes.SETTINGS));
+		dispatch(modalSetOpen(true));
 	};
 
 	return (
@@ -61,6 +71,7 @@ const LayoutHeader = () => {
 					<UIButton
 						icon={icons.settings}
 						text={formatMessage({ id: "common.settings" })}
+						onClick={handleSettings}
 					/>
 					<UIButton
 						icon={icons.folder}

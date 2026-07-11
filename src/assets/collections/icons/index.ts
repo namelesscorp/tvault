@@ -11,6 +11,7 @@ import download from "./download.svg";
 import eye from "./eye.svg";
 import eye_off from "./eye_off.svg";
 import file from "./file.svg";
+import file_attachment from "./file_attachment.svg";
 import filter from "./filter.svg";
 import fingerprint from "./fingerprint.svg";
 import folder from "./folder.svg";
@@ -26,13 +27,14 @@ import minus from "./minus.svg";
 import pencil from "./pencil.svg";
 import plus from "./plus.svg";
 import refresh from "./refresh.svg";
+import reverse from "./reverse.svg";
 import save from "./save.svg";
 import search from "./search.svg";
 import settings from "./settings.svg";
 import shield from "./shield.svg";
 import shield_2 from "./shield_2.svg";
 import unlock from "./unlock.svg";
-import file_attachment from "./file_attachment.svg";
+import upload from "./upload.svg";
 
 const icons = {
 	grid,
@@ -70,6 +72,8 @@ const icons = {
 	shield_2,
 	calendar,
 	file_attachment,
+	upload,
+	reverse,
 };
 
 export { icons };

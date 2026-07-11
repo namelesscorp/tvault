@@ -1,5 +1,7 @@
-import { Outlet } from "react-router-dom";
+import { useEffect } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
 import { cn } from "utils";
+import { setAppNavigate } from "features/Router/navigation";
 import { useTheme } from "features/Theme";
 import {
 	useBackgroundContainerScan,
@@ -13,6 +15,12 @@ const Layout = () => {
 	useBackgroundContainerScan();
 	useWizardStepTracking();
 	const { resolved } = useTheme();
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		setAppNavigate(navigate);
+		return () => setAppNavigate(null);
+	}, [navigate]);
 
 	return (
 		<div

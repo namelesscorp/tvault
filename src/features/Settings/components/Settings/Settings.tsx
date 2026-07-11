@@ -11,10 +11,10 @@ import { useUpdater } from "features/Settings/hooks";
 import { useAppDispatch } from "features/Store";
 import { UIButton, UIInput, UISectionHeading, UISelect } from "features/UI";
 import {
-	vaultChangeContainersPath,
-	vaultScanContainersDirectory,
+	vaultAddContainersPathAndScan,
+	vaultRemoveContainersPathFromCache,
 } from "features/Vault/state/Vault.actions";
-import { selectVaultContainersPath } from "features/Vault/state/Vault.selectors";
+import { selectVaultContainersPaths } from "features/Vault/state/Vault.selectors";
 import { icons } from "assets";
 
 const Settings = () => {
@@ -22,7 +22,7 @@ const Settings = () => {
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
 
-	const containersPath = useSelector(selectVaultContainersPath);
+	const containersPaths = useSelector(selectVaultContainersPaths);
 	const language = useSelector(selectAppLocale);
 
 	const {
@@ -52,10 +52,16 @@ const Settings = () => {
 	const pickFolder = useCallback(async () => {
 		const dir = await open({ directory: true, multiple: false });
 		if (typeof dir === "string") {
-			await dispatch(vaultChangeContainersPath(dir));
-			await dispatch(vaultScanContainersDirectory(dir));
+			await dispatch(vaultAddContainersPathAndScan(dir));
 		}
 	}, [dispatch]);
+
+	const removeFolder = useCallback(
+		(path: string) => {
+			dispatch(vaultRemoveContainersPathFromCache(path));
+		},
+		[dispatch],
+	);
 
 	const handleLanguageChange = useCallback(
 		(newLanguage: string) => {
@@ -87,18 +93,27 @@ const Settings = () => {
 					<p className="text-[20px] text-white text-medium">
 						{formatMessage({ id: "settings.containersPath" })}:
 					</p>
+					{containersPaths.map(path => (
+						<div
+							key={path}
+							className="flex items-center gap-[10px]">
+							<UIInput
+								value={path}
+								style={{ maxWidth: "50%" }}
+								readOnly
+							/>
+							<UIButton
+								icon={icons.minus}
+								text={formatMessage({ id: "common.remove" })}
+								onClick={() => removeFolder(path)}
+								style={{ width: "fit-content" }}
+							/>
+						</div>
+					))}
 					<div className="flex items-center gap-[10px]">
-						<UIInput
-							value={containersPath}
-							placeholder={formatMessage({
-								id: "common.pathPlaceholder",
-							})}
-							style={{ maxWidth: "50%" }}
-							readOnly
-						/>
 						<UIButton
 							icon={icons.folder}
-							text={formatMessage({ id: "common.browse" })}
+							text={formatMessage({ id: "settings.addFolder" })}
 							onClick={pickFolder}
 							style={{ width: "fit-content" }}
 						/>

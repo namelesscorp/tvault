@@ -3,9 +3,12 @@ import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { Fragment } from "react/jsx-runtime";
 import { cn, openPathUniversal } from "utils";
+import { devError } from "utils";
+import { modalSetOpen } from "features/Modal/state/Modal.actions";
 import { useAppDispatch } from "features/Store";
 import { useTheme } from "features/Theme";
 import { UIButton, UIImgIcon, UIInput, UIPasswordField } from "features/UI";
+import { useDecrypt } from "features/Vault/hooks/useDecrypt";
 import {
 	vaultAddContainer,
 	vaultAddRecentWithMountPath,
@@ -16,9 +19,6 @@ import {
 	selectVaultRecent,
 } from "features/Vault/state/Vault.selectors";
 import { icons } from "assets/collections/icons";
-import { useDecrypt } from "features/Vault/hooks/useDecrypt";
-import { modalSetOpen } from "features/Modal/state/Modal.actions";
-import { devError } from "utils";
 
 const ModalOpen = () => {
 	const { resolved } = useTheme();
@@ -72,7 +72,10 @@ const ModalOpen = () => {
 	const handleOpen = useCallback(async () => {
 		if (openWizardState.tokenType === "none") {
 			dispatch(
-				vaultSetOpenWizardState({ ...openWizardState, password: password }),
+				vaultSetOpenWizardState({
+					...openWizardState,
+					password: password,
+				}),
 			);
 		}
 		if (openWizardState.tokenType === "master") {
@@ -85,7 +88,10 @@ const ModalOpen = () => {
 		}
 		if (openWizardState.tokenType === "share") {
 			dispatch(
-				vaultSetOpenWizardState({ ...openWizardState, shares: readyShares }),
+				vaultSetOpenWizardState({
+					...openWizardState,
+					shares: readyShares,
+				}),
 			);
 		}
 
@@ -93,7 +99,9 @@ const ModalOpen = () => {
 			(r: any) => r.path === openWizardState.containerPath,
 		)?.lastMountPath;
 		const folderPath =
-			openWizardState.customMountDir || savedMountPath || openWizardState.mountDir;
+			openWizardState.customMountDir ||
+			savedMountPath ||
+			openWizardState.mountDir;
 		const containerPath = openWizardState.containerPath;
 
 		if (!containerPath || !folderPath) {
@@ -146,7 +154,16 @@ const ModalOpen = () => {
 		} catch (err) {
 			devError(err);
 		}
-	}, [dispatch, hmac, masterToken, openWizardState, password, readyShares, recent, run]);
+	}, [
+		dispatch,
+		hmac,
+		masterToken,
+		openWizardState,
+		password,
+		readyShares,
+		recent,
+		run,
+	]);
 
 	useEffect(() => {
 		if (done && !error) {
@@ -154,7 +171,9 @@ const ModalOpen = () => {
 				(r: any) => r.path === openWizardState.containerPath,
 			)?.lastMountPath;
 			const folderPath =
-				openWizardState.customMountDir || savedMountPath || openWizardState.mountDir;
+				openWizardState.customMountDir ||
+				savedMountPath ||
+				openWizardState.mountDir;
 			const containerPath = openWizardState.containerPath;
 
 			if (containerPath && folderPath) {
@@ -165,7 +184,10 @@ const ModalOpen = () => {
 					}),
 				);
 				dispatch(
-					vaultAddRecentWithMountPath({ path: containerPath, mountPath: folderPath }),
+					vaultAddRecentWithMountPath({
+						path: containerPath,
+						mountPath: folderPath,
+					}),
 				);
 				dispatch(modalSetOpen(false));
 				(async () => {
@@ -277,20 +299,26 @@ const ModalOpen = () => {
 				</div>
 				{openWizardState.integrityProvider === "hmac" && (
 					<div className="flex flex-col gap-[15px] mt-[20px]">
-					<p
-						className={cn(
-							"text-[20px] font-semibold leading-[120%] tracking-[-0.05em]",
-							{
-								"text-white": resolved === "dark",
-								"text-black/80": resolved === "light",
-							},
-						)}>
-						{formatMessage({
-							id: `modal.open.title.hmac`,
-						})}
-					</p>
-					<UIPasswordField value={hmac} onChange={e => setHmac(e.target.value)} placeholder={formatMessage({ id: "modal.open.placeholder.hmac" })} />
-				</div>
+						<p
+							className={cn(
+								"text-[20px] font-semibold leading-[120%] tracking-[-0.05em]",
+								{
+									"text-white": resolved === "dark",
+									"text-black/80": resolved === "light",
+								},
+							)}>
+							{formatMessage({
+								id: `modal.open.title.hmac`,
+							})}
+						</p>
+						<UIPasswordField
+							value={hmac}
+							onChange={e => setHmac(e.target.value)}
+							placeholder={formatMessage({
+								id: "modal.open.placeholder.hmac",
+							})}
+						/>
+					</div>
 				)}
 				<div className="flex flex-col gap-[20px] mt-[20px]">
 					<UIButton
@@ -302,14 +330,19 @@ const ModalOpen = () => {
 						onClick={handleOpen}
 						disabled={progress > 0 && !done}
 						style={{
-							backgroundColor: resolved === "dark" ? "#2463EB" : "#3A73ED",
+							backgroundColor:
+								resolved === "dark" ? "#2463EB" : "#3A73ED",
 							color: "#ffffff",
 						}}
 					/>
-					<p className={cn("text-[16px] font-medium tracking-[-0.05em] text-center", {
-						"text-black/70": resolved === "light",
-						"text-white/70": resolved === "dark",
-					})}>
+					<p
+						className={cn(
+							"text-[16px] font-medium tracking-[-0.05em] text-center",
+							{
+								"text-black/70": resolved === "light",
+								"text-white/70": resolved === "dark",
+							},
+						)}>
 						{formatMessage({ id: "modal.open.bottom.text" })}
 					</p>
 				</div>

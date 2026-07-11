@@ -40,7 +40,14 @@ export const selectVaultResealDataByPath = createSelector(
 		slice.resealData.find(data => data.containerPath === containerPath),
 );
 
+export const selectVaultContainersPaths = createSelector(
+	selectVaultSlice,
+	slice => slice.containersPaths,
+);
+
+// Backward-compatible single path (first watched folder) for places that need
+// a default containers directory, e.g. the default output path for a new vault.
 export const selectVaultContainersPath = createSelector(
 	selectVaultSlice,
-	slice => slice.containersPath,
+	slice => slice.containersPaths[0] ?? "",
 );
