@@ -1,79 +1,173 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { ReactNode, useCallback, useState } from "react";
+import { ReactNode, useCallback, useEffect, useState } from "react";
 import { useIntl } from "react-intl";
+import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { RouteTypes } from "interfaces";
-import { cn } from "utils";
-import { modalSetOpen } from "features/Modal/state/Modal.actions";
-import { appNavigate } from "features/Router/navigation";
+import {
+	cn,
+	getLocalizedErrorMessage,
+	getMountPathWithFallback,
+	useRequestGuard,
+} from "utils";
+import { useLocale } from "features/Localization";
+import { ModalTypes } from "features/Modal/Modal.model";
+import {
+	modalSetIcon,
+	modalSetOpen,
+	modalSetTitle,
+	modalSetType,
+} from "features/Modal/state/Modal.actions";
 import { useAppDispatch } from "features/Store";
 import { useTheme } from "features/Theme";
-import { UIButton, UIImgIcon, UIInput } from "features/UI";
+import { UIButton, UIImgIcon, UIInput, UIToggle } from "features/UI";
+import { useContainerInfo } from "features/Vault/hooks/useContainerInfo";
 import {
-	vaultAddContainersPathAndScan,
 	vaultAddRecentContainer,
 	vaultSetOpenWizardState,
 } from "features/Vault/state/Vault.actions";
+import { selectVaultRecent } from "features/Vault/state/Vault.selectors";
 import { icons } from "assets";
 
 const GREEN = "#16853F";
 
 const ModalAdd = () => {
 	const { formatMessage } = useIntl();
+	const { locale } = useLocale();
 	const { resolved } = useTheme();
 	const dispatch = useAppDispatch();
+	const recent = useSelector(selectVaultRecent);
+
+	const { run: runContainerInfo, done, result, error } = useContainerInfo();
+	const { fn: guardedRunContainerInfo, reset: resetContainerInfo } =
+		useRequestGuard(runContainerInfo);
 
 	const [filePath, setFilePath] = useState("");
-	const [folderPath, setFolderPath] = useState("");
+	const [autoMountDir, setAutoMountDir] = useState(true);
+	const [customMountDir, setCustomMountDir] = useState("");
+	const [containerInfo, setContainerInfo] = useState<any>(null);
+	const [busy, setBusy] = useState(false);
+
+	useEffect(() => {
+		if (done && result && !error) {
+			const data = result.data;
+			if (!data) {
+				toast.error(
+					formatMessage({
+						id: "vault.containerStep.containerInfo.error",
+					}),
+				);
+				return;
+			}
+			setContainerInfo(data);
+		} else if (error) {
+			toast.error(
+				`${formatMessage({ id: "vault.containerStep.containerInfo.error" })}: ${getLocalizedErrorMessage(error, formatMessage, locale)}`,
+			);
+			setFilePath("");
+			setContainerInfo(null);
+		}
+	}, [done, result, error]);
 
 	const pickFile = useCallback(async () => {
 		const file = await open({ multiple: false });
-		if (typeof file === "string") setFilePath(file);
-	}, []);
+		if (typeof file !== "string") return;
+
+		setFilePath(file);
+		setContainerInfo(null);
+		resetContainerInfo();
+		guardedRunContainerInfo(file).catch(() => {});
+	}, [guardedRunContainerInfo, resetContainerInfo]);
 
 	const pickFolder = useCallback(async () => {
 		const dir = await open({ directory: true, multiple: false });
-		if (typeof dir === "string") setFolderPath(dir);
+		if (typeof dir === "string") setCustomMountDir(dir);
+	}, []);
+
+	const handleAutoMountDirChange = useCallback((checked: boolean) => {
+		setAutoMountDir(checked);
+		if (checked) setCustomMountDir("");
 	}, []);
 
 	const handleAdd = useCallback(async () => {
-		if (!filePath && !folderPath) {
+		if (!filePath) {
 			toast.error(formatMessage({ id: "modal.add.error.empty" }));
 			return;
 		}
-		if (folderPath) {
-			await dispatch(vaultAddContainersPathAndScan(folderPath));
-			toast.success(formatMessage({ id: "modal.add.success.folder" }));
-		}
-		if (filePath) {
-			await dispatch(vaultAddRecentContainer(filePath));
-			toast.success(formatMessage({ id: "modal.add.success.file" }));
-		}
+		await dispatch(vaultAddRecentContainer(filePath));
+		toast.success(formatMessage({ id: "modal.add.success.file" }));
 		dispatch(modalSetOpen(false));
-	}, [dispatch, filePath, folderPath, formatMessage]);
+	}, [dispatch, filePath, formatMessage]);
 
-	const handleUnlock = useCallback(() => {
+	const handleUnlock = useCallback(async () => {
 		if (!filePath) {
 			toast.error(formatMessage({ id: "modal.add.error.noFile" }));
 			return;
 		}
-		dispatch(
-			vaultSetOpenWizardState({
-				containerPath: filePath,
-				mountDir: "",
-				autoMountDir: true,
-				customMountDir: "",
-				tokenType: "none",
-				integrityProvider: "none",
-				method: "password",
-				lastStep: undefined,
-				decryptCompleted: false,
-				decryptResult: undefined,
-			}),
-		);
-		dispatch(modalSetOpen(false));
-		appNavigate(RouteTypes.VaultOpenContainer);
-	}, [dispatch, filePath, formatMessage]);
+		if (!autoMountDir && !customMountDir.trim()) {
+			toast.error(formatMessage({ id: "modal.add.error.noFolder" }));
+			return;
+		}
+		if (!containerInfo) {
+			toast.error(
+				formatMessage({
+					id: "vault.containerStep.containerInfo.error.description",
+				}),
+			);
+			return;
+		}
+
+		setBusy(true);
+		try {
+			const savedMountPath = recent.find(
+				r => r.path === filePath,
+			)?.lastMountPath;
+
+			const mountDir = autoMountDir
+				? await getMountPathWithFallback(savedMountPath, filePath)
+				: customMountDir.trim();
+
+			const tokenType =
+				(containerInfo.token_type as "master" | "share" | "none") ||
+				"none";
+			const integrityProvider =
+				(containerInfo.integrity_provider_type as "none" | "hmac") ||
+				"none";
+
+			dispatch(
+				vaultSetOpenWizardState({
+					containerPath: filePath,
+					mountDir,
+					autoMountDir,
+					customMountDir: autoMountDir ? "" : customMountDir.trim(),
+					tokenType,
+					integrityProvider,
+					method: tokenType === "share" ? "shamir" : "password",
+					quickOpen: true,
+					lastStep: undefined,
+					decryptCompleted: false,
+					decryptResult: undefined,
+				}),
+			);
+
+			dispatch(modalSetTitle(formatMessage({ id: "modal.unlock" })));
+			dispatch(modalSetIcon(icons.folder_shield));
+			dispatch(modalSetType(ModalTypes.OPEN));
+			dispatch(modalSetOpen(true));
+		} catch (e: unknown) {
+			toast.error(getLocalizedErrorMessage(e, formatMessage, locale));
+		} finally {
+			setBusy(false);
+		}
+	}, [
+		autoMountDir,
+		containerInfo,
+		customMountDir,
+		dispatch,
+		filePath,
+		formatMessage,
+		locale,
+		recent,
+	]);
 
 	return (
 		<div>
@@ -85,7 +179,9 @@ const ModalAdd = () => {
 				{formatMessage({ id: "modal.add.info.title" })}
 			</p>
 			<div className="flex flex-col gap-[20px] mt-[20px]">
-				<Section icon={icons.key_2} title="modal.add.file.title">
+				<Section
+					icon={icons.file_attachment}
+					title="modal.add.file.title">
 					<p
 						className={cn(
 							"text-[16px] font-medium tracking-[-0.05em] ",
@@ -107,22 +203,44 @@ const ModalAdd = () => {
 				</Section>
 
 				<Section icon={icons.folder} title="modal.add.folder.title">
-					<p
-						className={cn(
-							"text-[16px] font-medium tracking-[-0.05em] ",
-							{
-								"text-white/70": resolved === "dark",
-								"text-black/70": resolved === "light",
-							},
-						)}>
-						{formatMessage({ id: "modal.add.folder.description" })}
-					</p>
-					<PathPicker
-						label="modal.add.folder.input.title"
-						placeholder="modal.add.folder.input.placeholder"
-						value={folderPath}
-						onBrowse={pickFolder}
-					/>
+					{!autoMountDir && (
+						<>
+							<p
+								className={cn(
+									"text-[16px] font-medium tracking-[-0.05em] ",
+									{
+										"text-white/70": resolved === "dark",
+										"text-black/70": resolved === "light",
+									},
+								)}>
+								{formatMessage({
+									id: "modal.add.folder.description",
+								})}
+							</p>
+							<PathPicker
+								label="modal.add.folder.input.title"
+								placeholder="modal.add.folder.input.placeholder"
+								value={customMountDir}
+								onBrowse={pickFolder}
+							/>
+						</>
+					)}
+					<div className="flex items-center justify-between gap-[20px]">
+						<p
+							className={cn(
+								"text-[16px] font-medium tracking-[-0.05em]",
+								{
+									"text-white/70": resolved === "dark",
+									"text-black/70": resolved === "light",
+								},
+							)}>
+							{formatMessage({ id: "modal.add.folder.auto" })}
+						</p>
+						<UIToggle
+							checked={autoMountDir}
+							onChange={handleAutoMountDirChange}
+						/>
+					</div>
 				</Section>
 			</div>
 
@@ -134,15 +252,17 @@ const ModalAdd = () => {
 					color="#ffffff"
 					noTheme
 					center
+					disabled={busy}
 					style={{ backgroundColor: GREEN, color: "#ffffff" }}
 				/>
 				<UIButton
-					icon={icons.lock}
+					icon={icons.unlock}
 					text={formatMessage({ id: "common.unlock" })}
 					onClick={handleUnlock}
 					color="#ffffff"
 					noTheme
 					center
+					disabled={busy}
 					style={{
 						backgroundColor:
 							resolved === "dark" ? "#2463EB" : "#3A73ED",

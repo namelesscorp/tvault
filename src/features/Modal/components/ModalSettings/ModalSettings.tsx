@@ -9,7 +9,7 @@ import { LocalizationTypes } from "features/Localization/Localization.model";
 import { useUpdater } from "features/Settings/hooks";
 import { useAppDispatch } from "features/Store";
 import { useTheme } from "features/Theme";
-import { UIImgIcon } from "features/UI";
+import { UIImgIcon, UIToggle } from "features/UI";
 import { icons } from "assets";
 import { modalSetOpen } from "../../state/Modal.actions";
 
@@ -30,38 +30,6 @@ const DEFAULT_NOTIFICATIONS: NotificationsState = {
 	unlock: true,
 	security: true,
 	updates: true,
-};
-
-const SettingsToggle = ({
-	checked,
-	onChange,
-}: {
-	checked: boolean;
-	onChange: (next: boolean) => void;
-}) => {
-	const { resolved } = useTheme();
-
-	return (
-		<button
-			type="button"
-			onClick={() => onChange(!checked)}
-			className={cn(
-				"relative w-[45px] h-[25px] rounded-[30px] transition-all duration-300 cursor-pointer shrink-0",
-				{
-					"bg-[#2463EB]": checked && resolved === "dark",
-					"bg-[#3A73ED]": checked && resolved === "light",
-					"bg-white/15": !checked && resolved === "dark",
-					"bg-black/15": !checked && resolved === "light",
-				},
-			)}>
-			<span
-				className={cn(
-					"absolute top-[3px] w-[20px] h-[20px] rounded-full bg-white transition-all duration-300",
-					checked ? "left-[23px]" : "left-[2px]",
-				)}
-			/>
-		</button>
-	);
 };
 
 const ModalButton = ({
@@ -446,7 +414,7 @@ const ModalSettings = () => {
 										id: "settings.modal.darkMode.description",
 									})}
 									control={
-										<SettingsToggle
+										<UIToggle
 											checked={resolved === "dark"}
 											onChange={next =>
 												setPreference(
@@ -478,7 +446,7 @@ const ModalSettings = () => {
 										id: "settings.modal.notifications.unlock.description",
 									})}
 									control={
-										<SettingsToggle
+										<UIToggle
 											checked={notifications.unlock}
 											onChange={next =>
 												setNotifications(prev => ({
@@ -497,7 +465,7 @@ const ModalSettings = () => {
 										id: "settings.modal.notifications.security.description",
 									})}
 									control={
-										<SettingsToggle
+										<UIToggle
 											checked={notifications.security}
 											onChange={next =>
 												setNotifications(prev => ({
@@ -516,7 +484,7 @@ const ModalSettings = () => {
 										id: "settings.modal.notifications.updates.description",
 									})}
 									control={
-										<SettingsToggle
+										<UIToggle
 											checked={notifications.updates}
 											onChange={next =>
 												setNotifications(prev => ({

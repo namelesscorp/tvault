@@ -8,6 +8,7 @@ export * from "./components/UIContainerRow";
 export * from "./components/UISectionHeading";
 export * from "./components/UIInput";
 export * from "./components/UICheckbox";
+export * from "./components/UIToggle";
 export * from "./components/UIEditableField";
 export * from "./components/UIEditablePasswordField";
 export * from "./components/UISelect";

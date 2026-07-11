@@ -1,8 +1,10 @@
+import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
+import { toast } from "react-toastify";
 import { Fragment } from "react/jsx-runtime";
-import { cn, openPathUniversal } from "utils";
+import { cn, getMountPathWithFallback, openPathUniversal } from "utils";
 import { devError } from "utils";
 import { modalSetOpen } from "features/Modal/state/Modal.actions";
 import { useAppDispatch } from "features/Store";
@@ -20,6 +22,66 @@ import {
 } from "features/Vault/state/Vault.selectors";
 import { icons } from "assets/collections/icons";
 
+const MIN_SHARES = 2;
+
+type TokenButtonVariant = "plain" | "green" | "red";
+
+const TokenIconButton = ({
+	icon,
+	variant,
+	onClick,
+	disabled = false,
+}: {
+	icon: string;
+	variant: TokenButtonVariant;
+	onClick: () => void;
+	disabled?: boolean;
+}) => {
+	const { resolved } = useTheme();
+	const dark = resolved === "dark";
+
+	const background =
+		variant === "green"
+			? dark
+				? "#264B4F"
+				: "#DAF4E0"
+			: variant === "red"
+				? dark
+					? "#4A2E3F"
+					: "#FEDBDA"
+				: "transparent";
+
+	const color =
+		variant === "green"
+			? dark
+				? "#49DE80"
+				: "#2E9253"
+			: variant === "red"
+				? dark
+					? "#F87171"
+					: "#E65757"
+				: dark
+					? "#9AC7FF"
+					: "#1353A3";
+
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			disabled={disabled}
+			style={{ backgroundColor: background }}
+			className={cn(
+				"flex items-center justify-center w-[40px] h-[40px] rounded-[10px] transition-all duration-300 cursor-pointer",
+				{
+					"opacity-50 cursor-default": disabled,
+					"hover:opacity-80": !disabled,
+				},
+			)}>
+			<UIImgIcon icon={icon} width={20} height={20} color={color} />
+		</button>
+	);
+};
+
 const ModalOpen = () => {
 	const { resolved } = useTheme();
 	const { formatMessage } = useIntl();
@@ -30,20 +92,18 @@ const ModalOpen = () => {
 	const { progress, done, error, run } = useDecrypt();
 
 	const [shares, setShares] = useState<string[]>(
-		openWizardState.shares && openWizardState.shares.length >= 2
+		openWizardState.shares && openWizardState.shares.length >= MIN_SHARES
 			? openWizardState.shares
-			: ["", ""],
+			: ["", "", ""],
+	);
+	const [tokenJsonPath, setTokenJsonPath] = useState<string>(
+		openWizardState.tokenJsonPath ?? "",
 	);
 
 	const [hmac, setHmac] = useState("");
 	const [password, setPassword] = useState("");
 	const [masterToken, setMasterToken] = useState("");
-
-	useEffect(() => {
-		if (shares.length >= 2 && shares[shares.length - 1] !== "") {
-			setShares(prev => [...prev, ""]);
-		}
-	}, [shares]);
+	const [usedFolderPath, setUsedFolderPath] = useState("");
 
 	const update = useCallback((idx: number, val: string) => {
 		setShares(prev => prev.map((s, i) => (i === idx ? val : s)));
@@ -53,24 +113,64 @@ const ModalOpen = () => {
 		setShares(prev => [...prev, ""]);
 	}, []);
 
-	const handleRemoveShare = useCallback((idx: number) => {
-		setShares(prev => {
-			if (prev.length <= 2) return prev;
-			return prev.filter((_, i) => i !== idx);
-		});
+	const handleRemoveShare = useCallback(() => {
+		setShares(prev =>
+			prev.length <= MIN_SHARES ? prev : prev.slice(0, -1),
+		);
 	}, []);
+
+	const handlePickTokenFile = useCallback(async () => {
+		const file = await open({
+			multiple: false,
+			filters: [{ name: "JSON", extensions: ["json"] }],
+		});
+		if (typeof file === "string") setTokenJsonPath(file);
+	}, []);
+
+	const handleClearTokenFile = useCallback(() => setTokenJsonPath(""), []);
 
 	const readyShares = useMemo(
 		() => shares.filter(s => s.trim().length > 0),
 		[shares],
 	);
 	const hasEnoughShares = useMemo(
-		() => readyShares.length >= 2,
+		() => readyShares.length >= MIN_SHARES,
 		[readyShares],
 	);
 
+	const isPassword = openWizardState.tokenType === "none";
+	const isMaster = openWizardState.tokenType === "master";
+	const isShare = openWizardState.tokenType === "share";
+
+	const canUnlock = isShare
+		? !!tokenJsonPath || hasEnoughShares
+		: isMaster
+			? masterToken.trim().length > 0
+			: password.trim().length > 0;
+
+	/**
+	 * The wizard may arrive here without a mount dir (e.g. unlocking a card that
+	 * was never opened before), so fall back to generating one.
+	 */
+	const resolveFolderPath = useCallback(async () => {
+		const savedMountPath = recent.find(
+			r => r.path === openWizardState.containerPath,
+		)?.lastMountPath;
+		const known =
+			openWizardState.customMountDir ||
+			savedMountPath ||
+			openWizardState.mountDir;
+
+		if (known) return known;
+
+		return getMountPathWithFallback(
+			savedMountPath,
+			openWizardState.containerPath,
+		);
+	}, [openWizardState, recent]);
+
 	const handleOpen = useCallback(async () => {
-		if (openWizardState.tokenType === "none") {
+		if (isPassword) {
 			dispatch(
 				vaultSetOpenWizardState({
 					...openWizardState,
@@ -78,7 +178,7 @@ const ModalOpen = () => {
 				}),
 			);
 		}
-		if (openWizardState.tokenType === "master") {
+		if (isMaster) {
 			dispatch(
 				vaultSetOpenWizardState({
 					...openWizardState,
@@ -86,118 +186,99 @@ const ModalOpen = () => {
 				}),
 			);
 		}
-		if (openWizardState.tokenType === "share") {
+		if (isShare) {
 			dispatch(
 				vaultSetOpenWizardState({
 					...openWizardState,
 					shares: readyShares,
+					tokenJsonPath: tokenJsonPath || undefined,
 				}),
 			);
 		}
 
-		const savedMountPath = recent.find(
-			(r: any) => r.path === openWizardState.containerPath,
-		)?.lastMountPath;
-		const folderPath =
-			openWizardState.customMountDir ||
-			savedMountPath ||
-			openWizardState.mountDir;
 		const containerPath = openWizardState.containerPath;
-
-		if (!containerPath || !folderPath) {
+		if (!containerPath) {
+			toast.error(formatMessage({ id: "modal.open.error.noPath" }));
 			return;
 		}
 
-		const isPassword = openWizardState.tokenType === "none";
-		const isMaster = openWizardState.tokenType === "master";
-		const isShare = openWizardState.tokenType === "share";
+		const folderPath = await resolveFolderPath();
+		setUsedFolderPath(folderPath);
+
+		const additionalPassword =
+			openWizardState.integrityProvider === "hmac" ? hmac : undefined;
 
 		try {
-			if (isPassword) {
+			if (isShare && tokenJsonPath) {
 				await run({
 					containerPath,
 					folderPath,
-					tokenReaderType: "flag",
-					tokenFormat: "plaintext",
-					tokenFlag: password,
-					additionalPassword:
-						openWizardState.integrityProvider === "hmac"
-							? hmac
-							: undefined,
+					tokenReaderType: "file",
+					tokenFormat: "json",
+					tokenPath: tokenJsonPath,
+					additionalPassword,
 				});
-			} else if (isMaster) {
-				await run({
-					containerPath,
-					folderPath,
-					tokenReaderType: "flag",
-					tokenFormat: "plaintext",
-					tokenFlag: masterToken,
-					additionalPassword:
-						openWizardState.integrityProvider === "hmac"
-							? hmac
-							: undefined,
-				});
-			} else if (isShare) {
-				const filtered = readyShares.filter(s => s.trim().length > 0);
-				await run({
-					containerPath,
-					folderPath,
-					tokenReaderType: "flag",
-					tokenFormat: "plaintext",
-					tokenFlag: filtered.join("|"),
-					additionalPassword:
-						openWizardState.integrityProvider === "hmac"
-							? hmac
-							: undefined,
-				});
+				return;
 			}
+
+			const tokenFlag = isPassword
+				? password
+				: isMaster
+					? masterToken
+					: readyShares.join("|");
+
+			await run({
+				containerPath,
+				folderPath,
+				tokenReaderType: "flag",
+				tokenFormat: "plaintext",
+				tokenFlag,
+				additionalPassword,
+			});
 		} catch (err) {
 			devError(err);
 		}
 	}, [
 		dispatch,
+		formatMessage,
 		hmac,
+		isMaster,
+		isPassword,
+		isShare,
 		masterToken,
 		openWizardState,
 		password,
 		readyShares,
-		recent,
+		resolveFolderPath,
 		run,
+		tokenJsonPath,
 	]);
 
 	useEffect(() => {
-		if (done && !error) {
-			const savedMountPath = recent.find(
-				(r: any) => r.path === openWizardState.containerPath,
-			)?.lastMountPath;
-			const folderPath =
-				openWizardState.customMountDir ||
-				savedMountPath ||
-				openWizardState.mountDir;
-			const containerPath = openWizardState.containerPath;
+		if (!done || error) return;
 
-			if (containerPath && folderPath) {
-				dispatch(
-					vaultAddContainer({
-						containerPath,
-						mountDir: folderPath,
-					}),
-				);
-				dispatch(
-					vaultAddRecentWithMountPath({
-						path: containerPath,
-						mountPath: folderPath,
-					}),
-				);
-				dispatch(modalSetOpen(false));
-				(async () => {
-					try {
-						await openPathUniversal(folderPath);
-					} catch {}
-				})();
-			}
-		}
-	}, [done, error, dispatch, openWizardState, recent]);
+		const containerPath = openWizardState.containerPath;
+		if (!containerPath || !usedFolderPath) return;
+
+		dispatch(
+			vaultAddContainer({
+				containerPath,
+				mountDir: usedFolderPath,
+			}),
+		);
+		dispatch(
+			vaultAddRecentWithMountPath({
+				path: containerPath,
+				mountPath: usedFolderPath,
+			}),
+		);
+		dispatch(modalSetOpen(false));
+		(async () => {
+			try {
+				await openPathUniversal(usedFolderPath);
+			} catch {}
+		})();
+	}, [done, error, dispatch, openWizardState, usedFolderPath]);
 
 	return (
 		<div>
@@ -245,7 +326,7 @@ const ModalOpen = () => {
 				</p>
 			</div>
 			<div className="mt-[28px]">
-				<div className="flex items-center justify-between">
+				<div className="flex items-center justify-between min-h-[40px]">
 					<p
 						className={cn(
 							"text-[20px] font-semibold leading-[120%] tracking-[-0.05em]",
@@ -258,9 +339,33 @@ const ModalOpen = () => {
 							id: `modal.open.title.${openWizardState.tokenType}`,
 						})}
 					</p>
+					{isShare && (
+						<div className="flex items-center gap-[15px]">
+							<TokenIconButton
+								icon={icons.upload}
+								variant="plain"
+								onClick={handlePickTokenFile}
+							/>
+							<TokenIconButton
+								icon={icons.plus}
+								variant="green"
+								onClick={handleAddShare}
+								disabled={!!tokenJsonPath}
+							/>
+							<TokenIconButton
+								icon={icons.minus}
+								variant="red"
+								onClick={handleRemoveShare}
+								disabled={
+									!!tokenJsonPath ||
+									shares.length <= MIN_SHARES
+								}
+							/>
+						</div>
+					)}
 				</div>
 				<div className="flex flex-col gap-[20px] mt-[20px]">
-					{openWizardState.tokenType === "none" && (
+					{isPassword && (
 						<UIInput
 							type="text"
 							placeholder={formatMessage({
@@ -270,7 +375,7 @@ const ModalOpen = () => {
 							onChange={e => setPassword(e.target.value)}
 						/>
 					)}
-					{openWizardState.tokenType === "master" && (
+					{isMaster && (
 						<UIInput
 							type="text"
 							placeholder={formatMessage({
@@ -280,22 +385,36 @@ const ModalOpen = () => {
 							onChange={e => setMasterToken(e.target.value)}
 						/>
 					)}
-					{openWizardState.tokenType === "share" && (
-						<Fragment>
-							{shares.map((s, idx) => (
-								<UIInput
-									key={idx}
-									placeholder={formatMessage(
-										{ id: "modal.open.placeholder.share" },
-										{ index: idx + 1 },
-									)}
-									value={s}
-									onChange={e => update(idx, e.target.value)}
-									style={{ maxWidth: "100%" }}
+					{isShare &&
+						(tokenJsonPath ? (
+							<div className="flex items-center gap-[10px]">
+								<UIInput value={tokenJsonPath} readOnly />
+								<TokenIconButton
+									icon={icons.minus}
+									variant="red"
+									onClick={handleClearTokenFile}
 								/>
-							))}
-						</Fragment>
-					)}
+							</div>
+						) : (
+							<Fragment>
+								{shares.map((s, idx) => (
+									<UIInput
+										key={idx}
+										placeholder={formatMessage(
+											{
+												id: "modal.open.placeholder.share",
+											},
+											{ index: idx + 1 },
+										)}
+										value={s}
+										onChange={e =>
+											update(idx, e.target.value)
+										}
+										style={{ maxWidth: "100%" }}
+									/>
+								))}
+							</Fragment>
+						))}
 				</div>
 				{openWizardState.integrityProvider === "hmac" && (
 					<div className="flex flex-col gap-[15px] mt-[20px]">
@@ -322,13 +441,13 @@ const ModalOpen = () => {
 				)}
 				<div className="flex flex-col gap-[20px] mt-[20px]">
 					<UIButton
-						text={formatMessage({ id: "common.open" })}
+						text={formatMessage({ id: "common.unlock" })}
 						icon={icons.unlock}
 						color="#ffffff"
 						noTheme
 						center
 						onClick={handleOpen}
-						disabled={progress > 0 && !done}
+						disabled={!canUnlock || (progress > 0 && !done)}
 						style={{
 							backgroundColor:
 								resolved === "dark" ? "#2463EB" : "#3A73ED",
