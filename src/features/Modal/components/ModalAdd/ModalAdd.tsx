@@ -270,8 +270,13 @@ const Section = ({
 
 	return (
 		<div
+			/**
+			 * 14px + the 1px border reads as Figma's 15px inset: there the stroke is
+			 * drawn over the frame, while a CSS border eats into it — and those 2px are
+			 * exactly what the 275 + 10 + 155 row below needs to fit without shrinking.
+			 */
 			className={cn(
-				"w-full flex flex-col gap-[10px] border rounded-[10px] p-[15px] bg-surface border-line",
+				"w-full flex flex-col gap-[10px] border rounded-[10px] p-[14px] bg-surface border-line",
 			)}>
 			<div className="flex items-center gap-[10px]">
 				<UIImgIcon icon={icon} width={29} height={29} color="#538DD5" />
@@ -308,6 +313,7 @@ const PathPicker = ({
 				)}>
 				{formatMessage({ id: label })}
 			</p>
+			{/** Figma: 275 + 10 + 155 fills the 440 inside a card (15px padding, 470 wide). */}
 			<div className="flex items-center gap-[10px]">
 				<UIInput
 					value={value}
@@ -319,8 +325,10 @@ const PathPicker = ({
 					icon={icons.eye}
 					text={formatMessage({ id: "common.browse" })}
 					onClick={onBrowse}
+					center
+					className="shrink-0"
 					style={{
-						width: "fit-content",
+						width: 155,
 						backgroundColor: GREEN,
 						color: "#ffffff",
 					}}

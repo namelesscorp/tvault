@@ -91,8 +91,8 @@ const LayoutHeader = () => {
 				<div className="flex items-center gap-[20px] pointer-events-none">
 					<img src={logo} alt="logo" />
 					<div className="flex flex-col gap-[5px]">
-						<h1 className="text-[32px] font-extrabold leading-[39px] tracking-[-0.05em] text-primary-fg">
-							Trust Vault
+						<h1 className="text-[32px] font-extrabold leading-[40px] tracking-[-0.05em] whitespace-nowrap text-primary-fg">
+							Trust <span className="text-brand">Vault</span>
 						</h1>
 						<p className="text-[16px] font-medium leading-[20px] tracking-[-0.05em] text-secondary-fg">
 							{formatMessage({ id: "header.subtitle" })}

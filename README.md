@@ -57,6 +57,12 @@ TVault follows a simple flow: **Create** → **Unlock** → **Work with files** 
 
 4. **Finish.** The container is created at the chosen location, with real progress reported while your files are packed and encrypted. If the vault uses a master token or Shamir shares, **this is the only time they are shown** — copy or save them now, they cannot be recovered later.
 
+### Open a vault that is not on the dashboard
+
+A container that TVault has never seen — one you copied from another machine, or that lives outside your scanned folders — is opened with **Open vault** in the header. Point it at the `*.tvlt` file and either add it to the dashboard for later, or unlock it straight away.
+
+![Open a vault](docs/screenshots/add-vault.png)
+
 ### Unlock a vault
 
 Press **Unlock vault** on the card. TVault asks only for what that vault actually needs: a password, a master token, or the required number of Shamir shares — plus the HMAC password, if integrity verification is enabled.

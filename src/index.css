@@ -116,6 +116,9 @@ html.native-frame body {
 		--tint-warning: #4a3c2a;
 		--tint-danger: #4a2e3f;
 		--hover-tint: rgba(255, 255, 255, 0.05);
+
+		--brand-from: #bd85fc;
+		--brand-to: #62a4fa;
 	}
 
 	:root.light {
@@ -150,6 +153,9 @@ html.native-frame body {
 		--tint-warning: #fceccb;
 		--tint-danger: #fedbda;
 		--hover-tint: rgba(0, 0, 0, 0.05);
+
+		--brand-from: #4976f4;
+		--brand-to: #8143ed;
 	}
 }
 
@@ -181,6 +187,17 @@ html.native-frame body {
 	--color-warning: var(--warning);
 	--color-danger: var(--danger);
 	--color-hover-tint: var(--hover-tint);
+}
+
+.text-brand {
+	background-image: linear-gradient(
+		to right,
+		var(--brand-from),
+		var(--brand-to)
+	);
+	background-clip: text;
+	-webkit-background-clip: text;
+	color: transparent;
 }
 
 /* Light-only elevation: the dark theme separates cards with borders instead. */

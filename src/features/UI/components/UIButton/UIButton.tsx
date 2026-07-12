@@ -10,6 +10,12 @@ const UIButton = ({
 	noTheme = false,
 	color = "#ffffff",
 	center = false,
+	/**
+	 * Pulled out of `props` on purpose: the spread below would otherwise re-assign
+	 * `className` after the merged one, wiping every class the button has — a caller
+	 * adding a single utility would silently lose the whole layout.
+	 */
+	className,
 	...props
 }: {
 	text: string;
@@ -46,7 +52,7 @@ const UIButton = ({
 					"hover:brightness-110 active:brightness-95":
 						!disabled && !loading && coloured,
 				},
-				props.className,
+				className,
 			)}
 			{...props}
 			style={{
