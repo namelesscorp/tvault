@@ -1,9 +1,7 @@
 //! cli_runner.rs — GUI ↔ tvault-core (encrypt/decrypt bridge)
 
 use std::{
-  env::current_exe,
   io::{BufRead, BufReader},
-  path::PathBuf,
   process::{Command, Stdio},
 };
 
@@ -627,7 +625,7 @@ fn locate_binary() -> Result<std::path::PathBuf, String> {
       let meta = fs::metadata(p)?;
       #[cfg(unix)]
       {
-        let mut perm = meta.permissions();
+        let perm = meta.permissions();
         let mode = perm.mode();
         if (mode & 0o111) == 0 {
           let mut newp = perm.clone();

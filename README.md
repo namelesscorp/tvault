@@ -1,6 +1,10 @@
-# TVault (Trust Vault)
+# TVault (Trust Vault)
 
 TVault is a cross-platform desktop application for creating secure encrypted vaults. A vault is essentially an encrypted folder (or container) that you can lock and unlock on demand to protect your sensitive files. When locked, all data inside the vault is encrypted and inaccessible. When unlocked, the vault behaves like a normal folder on your system, allowing you to add, remove, or edit files easily. TVault is designed with a focus on strong security, privacy, and ease of use on Windows and macOS.
+
+![TVault dashboard](docs/screenshots/dashboard.png)
+
+Every vault you own sits on one screen. Each card tells you how many files the vault holds, how much space it takes, how it is unlocked, and how strong that protection is — so you can see the state of your data without unlocking anything.
 
 ## Features
 
@@ -12,7 +16,11 @@ TVault is a cross-platform desktop application for creating secure encrypted vau
 
     Additionally, TVault employs an HMAC-based integrity check on the vault data. This means any unauthorized modification of the encrypted vault file can be detected, ensuring that your data hasn’t been tampered with.
 
-- **Cross-Platform Desktop App:** TVault runs natively on Windows and macOS, with a consistent user interface across both. The app is built with a lightweight stack (powered by Tauri) that integrates with your operating system’s native webview. This results in a small bundle size and minimal resource usage, while still providing a modern, responsive UI.
+- **A Dashboard for Your Vaults:** Your vaults are listed as cards showing their file count, size, tags and unlock method. Search by name or tag, filter by locked and unlocked, and see the totals across every vault at the top. Point TVault at the folders where you keep your containers and it finds them on startup, so a vault is never “lost” after you reinstall or move to another machine.
+
+- **Security Score:** Every vault carries a score, computed by the core from the way the vault was built – key type, integrity verification, compression. It is shown on the card and colour-coded (red, amber, green), so a vault behind a lone password stands out from one split into Shamir shares with HMAC integrity.
+
+- **Cross-Platform Desktop App:** TVault runs natively on Windows and macOS, with a consistent user interface across both. The app is built with a lightweight stack (powered by Tauri) that integrates with your operating system’s native webview. This results in a small bundle size and minimal resource usage, while still providing a modern, responsive UI. It follows your system’s light or dark theme, speaks English and Russian, and its animations can be switched off entirely.
 
 - **Open Source & Privacy-Focused:** The source code is available for review, and the application is local-first. All vault data is stored locally on your machine – TVault does not upload or sync your files to any cloud service. Your secrets stay with you. (See [License](https://github.com/namelesscorp/TVault/blob/master/LICENSE) for details on the source-available license.) The project welcomes community contributions and operates with transparency in mind.
 
@@ -24,64 +32,84 @@ TVault is available for both Windows and macOS:
 
 - **macOS:** Download the latest macOS app (.dmg) from our releases. Open the downloaded file and drag TVault into your Applications folder.
 
+> **Upgrading from a 0.1.x beta:** the container format changed in 1.0.0, and vaults created by a beta cannot be opened by it. Unlock them with the older build, copy the files out, and create the vaults again in 1.0.0. See the [changelog](CHANGELOG.md).
+
 ## Usage
 
 TVault follows a simple flow: **Create** → **Unlock** → **Work with files** → **Reseal/Close**. A vault is just an encrypted container that, when unlocked, is exposed as a normal folder in your system’s temporary directory. You work with your files using the OS file manager; the app itself doesn’t edit files.
 
-![Dashboard](https://github.com/namelesscorp/tvault-landing/blob/master/public/single/1.webp?raw=true)
-
 ### Create a vault
 
-1. **Name & location.** Pick a vault name and where to store the encrypted container file.
+1. **Vault information.** Give the vault a name, and optionally a comment and tags — tags are what you will search by later.
 
-    ![Name and location](https://github.com/namelesscorp/tvault-landing/blob/master/public/single/2.webp?raw=true)
+    ![Vault information](docs/screenshots/create-vault.png)
 
-2. **Provide the secret (two ways):**
+2. **Folders.** Choose the folder whose files go into the vault, and where the encrypted container file itself is written. If a container already sits at that path, TVault refuses to overwrite it.
 
-    - **Manual input** — you type a password or paste/import an existing key.
-    - **Mouse-entropy generator** — open the entropy window and move the cursor.
+3. **Security settings.** Decide how the vault is unlocked, and whether its integrity is verified.
 
-    ![Key source](https://github.com/namelesscorp/tvault-landing/blob/master/public/single/3.webp?raw=true)
+    - **Password** — unlock with a password or passphrase.
+    - **Master token** — unlock with a generated 256-bit master key.
+    - **Shamir’s Secret Sharing** — split the master key into M shares and require N of them to unlock, so no single share (and no single person) can open the vault alone.
+    - **HMAC integrity verification** — detects any unauthorized modification of the encrypted container. It is protected by a password of its own.
 
-3. **Integrity.** HMAC integrity is enabled by default to detect tampering of the encrypted container.
+    ![Security settings](docs/screenshots/create-security.png)
 
-    ![Integrity](https://github.com/namelesscorp/tvault-landing/blob/master/public/single/5.webp?raw=true)
-
-4. **Choose key type.**
-
-    - **Password** — unlock with a password.
-    - **Master key** — unlock with a generated 256-bit key.
-    - **Shamir’s Secret Sharing** — split a master key into M shares with an N-of-M threshold.
-
-    ![Key type](https://github.com/namelesscorp/tvault-landing/blob/master/public/single/6.webp?raw=true)
-
-5. **Finish.** The encrypted container file is created at the chosen location.
+4. **Finish.** The container is created at the chosen location, with real progress reported while your files are packed and encrypted. If the vault uses a master token or Shamir shares, **this is the only time they are shown** — copy or save them now, they cannot be recovered later.
 
 ### Unlock a vault
 
-- **Provide credentials** matching how the vault was created (password / master key / required Shamir shares, and HMAC password).
+Press **Unlock vault** on the card. TVault asks only for what that vault actually needs: a password, a master token, or the required number of Shamir shares — plus the HMAC password, if integrity verification is enabled.
 
-    ![Key source](https://github.com/namelesscorp/tvault-landing/blob/master/public/single/9.webp?raw=true)
+![Unlock a vault](docs/screenshots/unlock-vault.png)
 
-    ![Key select](https://github.com/namelesscorp/tvault-landing/blob/master/public/single/10.webp?raw=true)
-
-- On success, TVault decrypts the container into a temporary OS folder (inside your system’s temp directory). This is the folder you’ll work in.
+On success, TVault decrypts the container into a temporary OS folder (inside your system’s temp directory). This is the folder you’ll work in.
 
 ### Work with files
 
-- Treat the temporary folder like any normal directory: **add, edit, and delete** files using your usual apps and file manager.
+- Press **Browse files** on the card to open the unlocked folder in your file manager.
+- Treat it like any normal directory: **add, edit, and delete** files using your usual apps.
 - The app does not embed an editor; all changes happen in the unlocked folder.
-- You can also edit vault metadata (name, tags, comment) from the app UI while the vault is managed by TVault.
+- You can also edit vault metadata (name, tags, comment) from the app UI while the vault is unlocked.
 
 ### Reseal / Close
 
-- When you’re done, click **Close** in the app.
+- When you’re done, press **Lock vault** on the card.
 - TVault encrypts all changes back into the container, updates the HMAC, and deletes the temporary folder in the OS temp directory.
+
+### Vault information
+
+Any vault, locked or unlocked, can be inspected from the card’s menu: key type, integrity, compression, sizes, security score, and where its container lives.
+
+![Vault information](docs/screenshots/vault-info.png)
 
 ### Important
 
 - While a vault is unlocked, its contents exist in the OS temp directory — treat the session as sensitive (lock when you step away).
 - No recovery: if you lose the required credentials (password, master key, or Shamir shares), the vault cannot be recovered. Back up keys/shares securely.
+
+## Settings
+
+![Settings](docs/screenshots/settings-general.png)
+
+- **General** — the folders TVault scans for containers on startup. Add the places where you keep your vaults and they show up on the dashboard by themselves.
+- **Interface** — theme, language, and a switch that turns off every animation in the app.
+- **Backup** — export your settings to a JSON file and import them back on another machine. The file carries your preferences, scanned folders and the list of vaults; **it never contains passwords, master tokens or Shamir shares**.
+- **Updates** — automatic updates and a manual check.
+
+### Themes
+
+TVault follows your system theme, and can be pinned to light or dark in Settings › Interface.
+
+![Light theme](docs/screenshots/dashboard-light.png)
+
+### Updates
+
+![Updates](docs/screenshots/settings-updates.png)
+
+Automatic updates are **off by default** — until you turn them on, the app never reaches the network on its own. Once enabled, TVault checks for a new release in the background, downloads it, and then offers to restart.
+
+Installing an update means restarting the app, so TVault never does it behind your back. The restart is always your decision, and it is refused while a vault is still unlocked: pulling the app out from under a mounted vault would strand its temporary folder and lose whatever had not been sealed back yet. Lock your vaults first, then restart.
 
 ## Build
 
@@ -130,6 +158,13 @@ cargo install tauri-cli
 
 This will start both the frontend development server and the Tauri application.
 
+### Project layout
+
+- `src/` — the React frontend, grouped by feature (`Dashboard`, `Modal`, `Vault`, `Settings`, …).
+- `src-tauri/` — the Rust side: window setup, filesystem commands, and the bridge to the vault core.
+- `src-tauri/binaries/` — the [tvault-core](https://github.com/namelesscorp/tvault-core) CLI, shipped with the app as a sidecar. All encryption and decryption happens there; the app itself implements no cryptography.
+- `docs/screenshots/` — the images used by this README.
+
 ### Available Scripts
 
 #### Development
@@ -172,7 +207,11 @@ For advanced users and automation scenarios, TVault also offers a Command-Line I
 
 - Backup and Scripting: You can script backups for safekeeping using the CLI. For instance, a cron job could use TVault CLI to unlock a vault, run a backup (copy the vault file to a backup location), and then lock it again. Or you might script the export of certain data. Essentially, anything you can do in the GUI can be done via the CLI, allowing integration with other tools (CI/CD pipelines, etc.) and workflows.
 
-The CLI shares the same security model as the GUI, so all encryption/decryption is done locally and the same precautions apply. Please read the [CLI documentation](https://github.com/namelesscorp/tvault-core) for detailed command usage and examples.
+The desktop app is a front end for this very CLI — it ships the core as a sidecar binary and re-implements none of the cryptography itself. The CLI therefore shares the same security model as the GUI: all encryption/decryption is done locally and the same precautions apply. Please read the [CLI documentation](https://github.com/namelesscorp/tvault-core) for detailed command usage and examples.
+
+## Changelog
+
+Notable changes are recorded in the [changelog](CHANGELOG.md).
 
 ## Contributing
 
@@ -195,4 +234,4 @@ If you have questions or issues, please create an Issue in the repository or con
 
 ---
 
-© 2025 Trust Vault. All rights reserved.
+© 2026 Trust Vault. All rights reserved.

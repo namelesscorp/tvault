@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "utils";
 import { icons } from "assets";
 import { UIInput } from "../UIInput";
 
@@ -36,7 +37,12 @@ const UIPasswordField = ({
 			<button
 				type="button"
 				onClick={() => setShow(!show)}
-				className="absolute right-[10px] top-1/2 transform -translate-y-1/2 w-[30px] h-[30px] flex items-center justify-center cursor-pointer mask-size-[20px] bg-black hover:bg-black/80 transition-all duration-300 rounded-[10px]"
+				className={cn(
+					"absolute right-[10px] top-1/2 transform -translate-y-1/2 w-[30px] h-[30px] flex items-center justify-center cursor-pointer mask-size-[20px] transition-all duration-300 rounded-[10px]",
+					{
+						"bg-fg-strong hover:opacity-80": true,
+					},
+				)}
 				style={{
 					WebkitMask: `url("${show ? icons.eye_off : icons.eye}") no-repeat center`,
 					mask: `url("${show ? icons.eye_off : icons.eye}") no-repeat center`,

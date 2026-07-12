@@ -1,26 +1,26 @@
-import { Outlet } from "react-router-dom";
-import {
-	useBackgroundContainerScan,
-	useVaultStateReset,
-	useWizardStepTracking,
-} from "features/Vault";
+import { useEffect } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
+import { cn } from "utils";
+import { setAppNavigate } from "features/Router/navigation";
+import { useBackgroundContainerScan, useVaultStateReset } from "features/Vault";
 import { LayoutHeader } from "../LayoutHeader";
-import { LayoutSidebar } from "../LayoutSidebar";
 
 const Layout = () => {
 	useVaultStateReset();
 	useBackgroundContainerScan();
-	useWizardStepTracking();
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		setAppNavigate(navigate);
+		return () => setAppNavigate(null);
+	}, [navigate]);
 
 	return (
-		<div className="h-screen flex flex-col bg-[#101318]">
+		<div className={cn("h-screen flex flex-col bg-[#101318] bg-app")}>
 			<LayoutHeader />
-			<div className="flex flex-1 overflow-hidden">
-				<LayoutSidebar />
-				<main className="w-full p-[20px]">
-					<Outlet />
-				</main>
-			</div>
+			<main className="flex-1 min-h-0">
+				<Outlet />
+			</main>
 		</div>
 	);
 };

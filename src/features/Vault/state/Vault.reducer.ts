@@ -1,6 +1,5 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 import type { ContainerInfoData } from "interfaces";
-import { RouteTypes } from "interfaces";
 import {
 	ResealData,
 	SHAMIR_DEFAULT_THRESHOLD,
@@ -28,7 +27,6 @@ const initialState: VaultSlice = {
 		sharePath: "",
 		integrityProvider: "none",
 		additionalPassword: "",
-		lastStep: undefined,
 		encryptCompleted: false,
 		encryptResult: undefined,
 	},
@@ -40,7 +38,6 @@ const initialState: VaultSlice = {
 		tokenType: "none",
 		integrityProvider: "none",
 		method: "password",
-		lastStep: undefined,
 		decryptCompleted: false,
 		decryptResult: undefined,
 	},
@@ -48,7 +45,7 @@ const initialState: VaultSlice = {
 	recent: [],
 	containerInfo: {},
 	resealData: [],
-	containersPath: "",
+	containersPaths: [],
 };
 
 export const vaultSlice = createSlice({
@@ -138,12 +135,6 @@ export const vaultSlice = createSlice({
 		vaultResetWizardState: state => {
 			state.wizardState = initialState.wizardState;
 		},
-		vaultUpdateWizardLastStep: (
-			state,
-			{ payload }: PayloadAction<RouteTypes>,
-		) => {
-			state.wizardState.lastStep = payload;
-		},
 		vaultSetWizardEncryptCompleted: (
 			state,
 			{
@@ -166,12 +157,6 @@ export const vaultSlice = createSlice({
 		},
 		vaultResetOpenWizardState: state => {
 			state.openWizardState = initialState.openWizardState;
-		},
-		vaultUpdateOpenWizardLastStep: (
-			state,
-			{ payload }: PayloadAction<RouteTypes>,
-		) => {
-			state.openWizardState.lastStep = payload;
 		},
 		vaultSetOpenWizardDecryptCompleted: (
 			state,
@@ -202,8 +187,24 @@ export const vaultSlice = createSlice({
 		vaultClearResealData: state => {
 			state.resealData = [];
 		},
-		vaultSetContainersPath: (state, { payload }: PayloadAction<string>) => {
-			state.containersPath = payload;
+		vaultSetContainersPaths: (
+			state,
+			{ payload }: PayloadAction<string[]>,
+		) => {
+			state.containersPaths = Array.from(new Set(payload));
+		},
+		vaultAddContainersPath: (state, { payload }: PayloadAction<string>) => {
+			if (!state.containersPaths.includes(payload)) {
+				state.containersPaths.push(payload);
+			}
+		},
+		vaultRemoveContainersPath: (
+			state,
+			{ payload }: PayloadAction<string>,
+		) => {
+			state.containersPaths = state.containersPaths.filter(
+				p => p !== payload,
+			);
 		},
 	},
 });
@@ -221,16 +222,16 @@ export const {
 	vaultRemoveRecent,
 	vaultSetWizardState,
 	vaultResetWizardState,
-	vaultUpdateWizardLastStep,
 	vaultSetWizardEncryptCompleted,
 	vaultSetOpenWizardState,
 	vaultResetOpenWizardState,
-	vaultUpdateOpenWizardLastStep,
 	vaultSetOpenWizardDecryptCompleted,
 	vaultAddResealData,
 	vaultRemoveResealData,
 	vaultClearResealData,
-	vaultSetContainersPath,
+	vaultSetContainersPaths,
+	vaultAddContainersPath,
+	vaultRemoveContainersPath,
 } = vaultSlice.actions;
 
 export const vaultReducer = vaultSlice.reducer;

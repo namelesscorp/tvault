@@ -1,12 +1,23 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
+import { cn } from "utils";
+import { useTheme } from "features/Theme";
 
 const TARGET_BITS = 512;
 const BATCH_SIZE = 48;
 
-const EntropyCanvas = ({ onReady }: { onReady: () => void }) => {
+const EntropyCanvas = ({
+	onReady,
+	width = 400,
+	height = 200,
+}: {
+	onReady: () => void;
+	width?: number;
+	height?: number;
+}) => {
 	const { formatMessage } = useIntl();
+	const { resolved } = useTheme();
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const [bits, setBits] = useState(0);
 	const buffer = useRef<number[]>([]);
@@ -55,11 +66,17 @@ const EntropyCanvas = ({ onReady }: { onReady: () => void }) => {
 
 	return (
 		<div className="flex flex-col items-center gap-[20px]">
-			<div className="border border-[#3361D8]/50 rounded-[10px] bg-[#3361D8]/10 w-[400px] h-[200px] overflow-hidden">
-				<canvas ref={canvasRef} width={400} height={200} />
+			<div
+				className="border border-[#3361D8]/50 rounded-[10px] bg-[#3361D8]/10 overflow-hidden"
+				style={{ width, height }}>
+				<canvas ref={canvasRef} width={width} height={height} />
 			</div>
-			<div className="w-[320px]">
-				<div className="h-[10px] bg-white/10 rounded-[10px]">
+			<div style={{ width }}>
+				<div
+					className={cn("h-[10px] rounded-[10px]", {
+						"bg-white/10": resolved === "dark",
+						"bg-black/10": resolved === "light",
+					})}>
 					<div
 						className="h-[10px] bg-[#3361D8] rounded-[10px] transition-all duration-300 ease"
 						style={{
@@ -67,7 +84,7 @@ const EntropyCanvas = ({ onReady }: { onReady: () => void }) => {
 						}}></div>
 				</div>
 			</div>
-			<p className="text-[16px] text-white/50 text-medium">
+			<p className={cn("text-[16px] font-medium text-faint")}>
 				{formatMessage(
 					{ id: "entropy.generated" },
 					{ count: bits, total: TARGET_BITS },

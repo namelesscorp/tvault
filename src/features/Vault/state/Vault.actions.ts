@@ -1,6 +1,6 @@
 import { Store } from "@tauri-apps/plugin-store";
 import { devError, devInfo } from "utils";
-import { AppDispatch } from "features/Store";
+import { AppDispatch, AppGetState } from "features/Store";
 import { vaultSlice } from "./Vault.reducer";
 
 export const {
@@ -15,56 +15,93 @@ export const {
 	vaultRemoveRecent,
 	vaultSetWizardState,
 	vaultResetWizardState,
-	vaultUpdateWizardLastStep,
 	vaultSetWizardEncryptCompleted,
 	vaultSetOpenWizardState,
 	vaultResetOpenWizardState,
-	vaultUpdateOpenWizardLastStep,
 	vaultSetOpenWizardDecryptCompleted,
 	vaultUpdateRecentMountPath,
 	vaultAddResealData,
 	vaultRemoveResealData,
 	vaultClearResealData,
-	vaultSetContainersPath,
+	vaultSetContainersPaths,
+	vaultAddContainersPath,
+	vaultRemoveContainersPath,
 } = vaultSlice.actions;
 
 const VAULT_SETTINGS_STORE_KEY = "vault-settings.json";
+// Legacy single-path key, kept for migration of older installs.
 const CONTAINERS_PATH_CACHE_KEY = "containersPath";
+const CONTAINERS_PATHS_CACHE_KEY = "containersPaths";
 
 export const loadVaultSettingsFromCache = async (dispatch: AppDispatch) => {
 	try {
 		const store = await Store.load(VAULT_SETTINGS_STORE_KEY);
 
-		const cachedContainersPath = await store.get<string>(
-			CONTAINERS_PATH_CACHE_KEY,
+		const cachedContainersPaths = await store.get<string[]>(
+			CONTAINERS_PATHS_CACHE_KEY,
 		);
-		if (cachedContainersPath) {
-			dispatch(vaultSetContainersPath(cachedContainersPath));
-			devInfo("Loaded cached containers path:", cachedContainersPath);
+
+		if (Array.isArray(cachedContainersPaths)) {
+			dispatch(vaultSetContainersPaths(cachedContainersPaths));
+			devInfo("Loaded cached containers paths:", cachedContainersPaths);
+			return;
+		}
+
+		// Migration: older versions stored a single containers path.
+		const legacyPath = await store.get<string>(CONTAINERS_PATH_CACHE_KEY);
+		if (legacyPath) {
+			const migrated = [legacyPath];
+			dispatch(vaultSetContainersPaths(migrated));
+			await store.set(CONTAINERS_PATHS_CACHE_KEY, migrated);
+			await store.save();
+			devInfo("Migrated legacy containers path to list:", migrated);
 		}
 	} catch (error) {
 		devError("Failed to load vault settings from cache:", error);
 	}
 };
 
-export const saveContainersPathToCache = async (path: string) => {
+export const saveContainersPathsToCache = async (paths: string[]) => {
 	try {
 		const store = await Store.load(VAULT_SETTINGS_STORE_KEY);
-		await store.set(CONTAINERS_PATH_CACHE_KEY, path);
+		await store.set(CONTAINERS_PATHS_CACHE_KEY, paths);
 		await store.save();
-		devInfo("Saved containers path to cache:", path);
+		devInfo("Saved containers paths to cache:", paths);
 	} catch (error) {
-		devError("Failed to save containers path to cache:", error);
+		devError("Failed to save containers paths to cache:", error);
 	}
 };
 
-export const vaultChangeContainersPath = (path: string) => {
-	return async (dispatch: AppDispatch) => {
-		dispatch(vaultSetContainersPath(path));
+export const vaultAddContainersPathAndScan = (path: string) => {
+	return async (dispatch: AppDispatch, getState: AppGetState) => {
+		dispatch(vaultAddContainersPath(path));
 		try {
-			await saveContainersPathToCache(path);
+			const paths: string[] = getState().vault?.containersPaths ?? [];
+			await saveContainersPathsToCache(paths);
 		} catch (e) {
-			devError("Failed to cache containers path", e);
+			devError("Failed to cache containers paths", e);
+		}
+		await dispatch(vaultScanContainersDirectory(path));
+	};
+};
+
+export const vaultRemoveContainersPathFromCache = (path: string) => {
+	return async (dispatch: AppDispatch, getState: AppGetState) => {
+		dispatch(vaultRemoveContainersPath(path));
+		try {
+			const paths: string[] = getState().vault?.containersPaths ?? [];
+			await saveContainersPathsToCache(paths);
+		} catch (e) {
+			devError("Failed to cache containers paths", e);
+		}
+	};
+};
+
+export const vaultScanAllContainersDirectories = (paths: string[]) => {
+	return async (dispatch: AppDispatch) => {
+		for (const path of paths) {
+			if (!path) continue;
+			await dispatch(vaultScanContainersDirectory(path));
 		}
 	};
 };
@@ -82,6 +119,72 @@ export const saveRecentToStore = async (recentContainers: any[]) => {
 	} catch (e) {
 		devError("Failed to save recent containers to store", e);
 	}
+};
+
+export const vaultAddRecentContainer = (path: string) => {
+	return async (dispatch: AppDispatch) => {
+		try {
+			const store = await Store.load("recent-containers.json");
+			const existingRecent =
+				(await store.get<
+					{
+						path: string;
+						lastOpenedAt: number;
+						lastMountPath?: string;
+					}[]
+				>("recent")) ?? [];
+			const filtered = existingRecent.filter(r => r.path !== path);
+			filtered.unshift({ path, lastOpenedAt: Date.now() });
+			const updated = filtered.slice(0, 100);
+			dispatch(vaultSetRecent(updated));
+			await saveRecentToStore(updated);
+			devInfo("Added container file to recent:", path);
+		} catch (e) {
+			devError("Failed to add container file to recent", e);
+		}
+	};
+};
+
+/**
+ * Puts the container at the top of the dashboard AND persists the list.
+ * The bare `vaultAddRecentWithMountPath` reducer only touches redux, so on its
+ * own a freshly opened or created vault would vanish on the next launch.
+ */
+export const vaultTrackRecentContainer = (payload: {
+	path: string;
+	mountPath?: string;
+}) => {
+	return async (dispatch: AppDispatch, getState: AppGetState) => {
+		dispatch(vaultAddRecentWithMountPath(payload));
+		await saveRecentToStore(getState().vault.recent);
+	};
+};
+
+/** Drops the container from the dashboard, leaving the file on disk. */
+export const vaultRemoveRecentContainer = (path: string) => {
+	return async (dispatch: AppDispatch, getState: AppGetState) => {
+		dispatch(vaultRemoveRecent(path));
+		dispatch(vaultRemoveResealData(path));
+		dispatch(vaultRemoveContainer(path));
+
+		await saveRecentToStore(getState().vault.recent);
+		devInfo("Removed container from dashboard:", path);
+	};
+};
+
+/** Deletes the container file itself, then drops it from the dashboard. */
+export const vaultDeleteContainer = (path: string) => {
+	return async (dispatch: AppDispatch, getState: AppGetState) => {
+		const { invoke } = await import("@tauri-apps/api/core");
+		await invoke("remove_file", { path });
+
+		dispatch(vaultRemoveRecent(path));
+		dispatch(vaultRemoveResealData(path));
+		dispatch(vaultRemoveContainer(path));
+
+		await saveRecentToStore(getState().vault.recent);
+		devInfo("Deleted container file:", path);
+	};
 };
 
 export const isContainerAccessible = async (path: string): Promise<boolean> => {

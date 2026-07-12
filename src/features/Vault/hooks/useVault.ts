@@ -1,13 +1,18 @@
 import { invoke } from "@tauri-apps/api/core";
 import { tempDir } from "@tauri-apps/api/path";
 import { BaseDirectory, remove } from "@tauri-apps/plugin-fs";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { RouteTypes } from "interfaces";
 import { devError, devLog, openPathUniversal } from "utils";
+import { ModalTypes } from "features/Modal/Modal.model";
+import {
+	modalSetIcon,
+	modalSetOpen,
+	modalSetTitle,
+	modalSetType,
+} from "features/Modal/state/Modal.actions";
 import { useAppDispatch } from "features/Store";
 import { useContainerInfo, useReseal } from "features/Vault/hooks";
 import {
@@ -20,18 +25,21 @@ import {
 	selectVaultContainerInfo,
 	selectVaultRecent,
 } from "features/Vault/state/Vault.selectors";
+import { icons } from "assets/collections/icons";
 import { ResealData } from "../Vault.model";
 
 export const useVault = (
 	onContainerClose?: (containerPath: string) => void,
 ) => {
 	const dispatch = useAppDispatch();
-	const navigate = useNavigate();
 	const infoMap = useSelector(selectVaultContainerInfo);
 	const recent = useSelector(selectVaultRecent);
-	const { run: runReseal } = useReseal();
+	const { run: runReseal, progress: resealProgress } = useReseal();
 	const { run: runContainerInfo } = useContainerInfo();
 	const { formatMessage } = useIntl();
+
+	/** Which container is being repacked right now — the card shows a spinner. */
+	const [closingPath, setClosingPath] = useState<string | null>(null);
 
 	const handleOpenFolder = useCallback(async (mountDir: string) => {
 		try {
@@ -47,13 +55,20 @@ export const useVault = (
 			mountDir: string,
 			resealData?: ResealData,
 		) => {
+			setClosingPath(containerPath);
 			try {
 				if (resealData) {
 					const containerInfo = infoMap[containerPath];
+					/** An empty object would silently strip name/comment/tags on reseal. */
+					const hasInfo =
+						!!resealData.containerInfo &&
+						Object.keys(resealData.containerInfo).length > 0;
 					const completeResealData: ResealData = {
 						...resealData,
-						containerInfo:
-							resealData.containerInfo || containerInfo || {},
+						containerInfo: hasInfo
+							? resealData.containerInfo
+							: (containerInfo ??
+								({} as ResealData["containerInfo"])),
 					};
 
 					devLog(
@@ -97,7 +112,9 @@ export const useVault = (
 					try {
 						const resealArgs: any = {
 							currentPath: completeResealData.containerPath,
-							newPath: completeResealData.containerPath,
+							newPath:
+								completeResealData.newContainerPath ||
+								completeResealData.containerPath,
 							folderPath: completeResealData.mountDir,
 						};
 
@@ -250,6 +267,8 @@ export const useVault = (
 			} catch (err) {
 				devError("Failed to close container", err);
 				toast.error(formatMessage({ id: "container.close.error" }));
+			} finally {
+				setClosingPath(null);
 			}
 		},
 		[dispatch, onContainerClose, runReseal, infoMap],
@@ -278,14 +297,19 @@ export const useVault = (
 				} as any),
 			);
 
-			navigate(RouteTypes.VaultOpenContainer);
+			dispatch(modalSetTitle(formatMessage({ id: "modal.unlock" })));
+			dispatch(modalSetIcon(icons.folder_shield));
+			dispatch(modalSetType(ModalTypes.OPEN));
+			dispatch(modalSetOpen(true));
 		},
-		[dispatch, navigate, infoMap, recent],
+		[dispatch, infoMap, recent, formatMessage],
 	);
 
 	return {
 		handleOpenFolder,
 		handleCloseContainer,
 		handleOpenClosedContainer,
+		closingPath,
+		closingProgress: resealProgress,
 	};
 };

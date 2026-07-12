@@ -29,7 +29,263 @@ body {
 	overflow: hidden;
 }
 
+/* macOS draws the window frame itself, so our own rounding would show through. */
+html.native-frame body {
+	border-radius: 0;
+}
+
 #root {
 	height: 100%;
 	background-color: transparent;
+}
+
+@layer base {
+	/* Theme tokens */
+	:root {
+		/* defaults to avoid FOUC before JS applies .light/.dark */
+		--primary: 0 0% 0% / 0.9;
+		--primary-fg: 0 0% 100% / 1;
+		--secondary: 0 0% 0% / 0.7;
+		--secondary-fg: 0 0% 100% / 0.9;
+	}
+
+	:root.light {
+		/* backgrounds (temporary contrasting choices) */
+		--primary: 0 0% 100% / 1; /* white 100% */
+		--secondary: 0 0% 0% / 0.06; /* subtle dark overlay */
+
+		/* text */
+		--primary-fg: 0 0% 0% / 0.8; /* black 80% */
+		--secondary-fg: 0 0% 0% / 0.7; /* black 70% */
+	}
+
+	:root.dark {
+		/* backgrounds (temporary contrasting choices) */
+		--primary: 0 0% 0% / 0.92; /* near black */
+		--secondary: 0 0% 100% / 0.1; /* subtle light overlay */
+
+		/* text */
+		--primary-fg: 0 0% 100% / 1; /* white 100% */
+		--secondary-fg: 0 0% 100% / 0.9; /* white 90% */
+	}
+}
+
+/* Tailwind v4 theme tokens for scalable color usage */
+@theme {
+	--color-primary: hsl(var(--primary));
+	--color-primary-fg: hsl(var(--primary-fg));
+	--color-secondary: hsl(var(--secondary));
+	--color-secondary-fg: hsl(var(--secondary-fg));
+}
+
+/*
+ * Semantic colours. Every value here is one the components used to hardcode and
+ * branch on with `resolved === "dark"` — so `bg-surface` renders exactly what
+ * `bg-white/3` (dark) and `bg-white/80` (light) rendered before.
+ */
+@layer base {
+	:root.dark {
+		--app: #1d273e;
+		--panel: #1e293b;
+		--surface: rgba(255, 255, 255, 0.03);
+		--surface-hover: #39465f;
+		--elevated: #293449;
+		--badge: #20314d;
+		--line: #313a4f;
+		--field: #313a4f;
+		--field-line: rgba(255, 255, 255, 0.03);
+		--button: #2d384e;
+		--button-line: #6d7482;
+		--track: rgba(255, 255, 255, 0.15);
+		--scrim: rgba(5, 10, 20, 0.6);
+
+		--fg: #ffffff;
+		--fg-strong: #ffffff;
+		--fg-soft: #ffffff;
+		--muted: rgba(255, 255, 255, 0.7);
+		--faint: rgba(255, 255, 255, 0.5);
+
+		--accent: #538dd5;
+		--accent-blue: #2463eb;
+		--accent-green: #16853f;
+		--success: #49de80;
+		--success-alt: #34d399;
+		--warning: #fbbf24;
+		--danger: #f87171;
+		--tint-success: #274a4f;
+		--tint-warning: #4a3c2a;
+		--tint-danger: #4a2e3f;
+		--hover-tint: rgba(255, 255, 255, 0.05);
+	}
+
+	:root.light {
+		--app: #f5f7ff;
+		--panel: #f5f7ff;
+		--surface: rgba(255, 255, 255, 0.8);
+		--surface-hover: #ffffff;
+		--elevated: #ffffff;
+		--badge: #9ac7ff;
+		--line: rgba(0, 0, 0, 0.7);
+		--field: rgba(255, 255, 255, 0.8);
+		--field-line: rgba(0, 0, 0, 0.7);
+		--button: rgba(255, 255, 255, 0.8);
+		--button-line: rgba(0, 0, 0, 0.7);
+		--track: rgba(0, 0, 0, 0.15);
+		--scrim: rgba(15, 23, 42, 0.45);
+
+		--fg: rgba(0, 0, 0, 0.8);
+		--fg-strong: #000000;
+		--fg-soft: rgba(0, 0, 0, 0.7);
+		--muted: rgba(0, 0, 0, 0.7);
+		--faint: rgba(0, 0, 0, 0.5);
+
+		--accent: #1353a3;
+		--accent-blue: #3a73ed;
+		--accent-green: #2e9253;
+		--success: #2e9253;
+		--success-alt: #2e9253;
+		--warning: #a16207;
+		--danger: #e65757;
+		--tint-success: #daf4e0;
+		--tint-warning: #fceccb;
+		--tint-danger: #fedbda;
+		--hover-tint: rgba(0, 0, 0, 0.05);
+	}
+}
+
+@theme inline {
+	--color-app: var(--app);
+	--color-panel: var(--panel);
+	--color-surface: var(--surface);
+	--color-surface-hover: var(--surface-hover);
+	--color-elevated: var(--elevated);
+	--color-badge: var(--badge);
+	--color-line: var(--line);
+	--color-field: var(--field);
+	--color-field-line: var(--field-line);
+	--color-button: var(--button);
+	--color-button-line: var(--button-line);
+	--color-track: var(--track);
+	--color-scrim: var(--scrim);
+
+	--color-fg: var(--fg);
+	--color-fg-strong: var(--fg-strong);
+	--color-fg-soft: var(--fg-soft);
+	--color-muted: var(--muted);
+	--color-faint: var(--faint);
+
+	--color-accent: var(--accent);
+	--color-accent-blue: var(--accent-blue);
+	--color-accent-green: var(--accent-green);
+	--color-success: var(--success);
+	--color-warning: var(--warning);
+	--color-danger: var(--danger);
+	--color-hover-tint: var(--hover-tint);
+}
+
+/* Light-only elevation: the dark theme separates cards with borders instead. */
+.card-shadow {
+	box-shadow: 0px 5px 5px 2px rgba(0, 0, 0, 0.1);
+}
+
+:root.dark .card-shadow {
+	box-shadow: none;
+}
+
+/* Cards and tiles rise a little towards the cursor. */
+.hover-lift {
+	transition:
+		transform 200ms ease-out,
+		box-shadow 200ms ease-out;
+}
+
+.hover-lift:hover {
+	transform: translateY(-2px);
+}
+
+/* Buttons give way under the press. */
+.press:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+/* The badge inside a hovered card swells a touch. */
+.icon-pop {
+	transition: transform 200ms ease-out;
+}
+
+.group:hover .icon-pop {
+	transform: scale(1.06);
+}
+
+/* Cards fade up as they arrive; Dashboard staggers them with a delay. */
+@keyframes enter-up {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/*
+ * `backwards`, not `both`: an animation that keeps filling forwards would pin
+ * `transform` for good and the hover lift above could never move the card.
+ */
+.animate-enter-up {
+	animation: enter-up 350ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes float-soft {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-6px);
+	}
+}
+
+.animate-float {
+	animation: float-soft 3s ease-in-out infinite;
+}
+
+/* A highlight sweeping the progress bar, so it reads as alive even while stuck. */
+@keyframes shimmer {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(300%);
+	}
+}
+
+.animate-shimmer {
+	animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/*
+ * Settings › Interface › Animations. Every bit of motion in the app is a CSS
+ * transition or a keyframe animation, so one class on <html> switches all of it
+ * off at once — no component needs to know about the setting.
+ *
+ * The spinner is the deliberate exception: it reports that work is running, and
+ * a frozen spinner reads as a hung app rather than as a calm one. Transform-based
+ * hovers are pinned separately, otherwise "no motion" would just make them snap.
+ */
+html.no-motion *:not(.animate-spin),
+html.no-motion *:not(.animate-spin)::before,
+html.no-motion *:not(.animate-spin)::after {
+	transition-duration: 1ms !important;
+	transition-delay: 0ms !important;
+	animation-duration: 1ms !important;
+	animation-delay: 0ms !important;
+	animation-iteration-count: 1 !important;
+}
+
+html.no-motion .hover-lift:hover,
+html.no-motion .press:active:not(:disabled),
+html.no-motion .group:hover .icon-pop {
+	transform: none;
 }

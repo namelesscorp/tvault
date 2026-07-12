@@ -1,1 +1,2 @@
-export * from "./components/Settings";
+export * from "./hooks";
+export * from "./Settings.model";

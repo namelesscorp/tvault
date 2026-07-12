@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Hook for creating a function that executes only once
@@ -147,4 +147,86 @@ export function useRequestGuard<T extends (...args: any[]) => Promise<any>>(
 		reset,
 		isLoading: loadingRef.current,
 	};
+}
+
+/**
+ * Runs a number up to its new value instead of snapping to it — the dashboard
+ * tiles count in when the app opens and re-count whenever the totals change.
+ *
+ * `enabled` has to be passed in: this lives in utils, and reaching for the
+ * animations setting here would tie utils to the store.
+ */
+export function useCountUp(
+	value: number,
+	{
+		enabled = true,
+		duration = 700,
+	}: { enabled?: boolean; duration?: number } = {},
+) {
+	/** Starts at zero so the very first render counts up rather than appearing done. */
+	const [display, setDisplay] = useState(0);
+	const fromRef = useRef(0);
+
+	useEffect(() => {
+		if (!enabled) {
+			fromRef.current = value;
+			setDisplay(value);
+			return;
+		}
+
+		const from = fromRef.current;
+		if (from === value) {
+			return;
+		}
+
+		let frame = 0;
+		const start = performance.now();
+		const tick = (now: number) => {
+			const progress = Math.min(1, (now - start) / duration);
+			/** Ease-out cubic: quick off the mark, settles gently on the number. */
+			const eased = 1 - Math.pow(1 - progress, 3);
+			const next = progress === 1 ? value : from + (value - from) * eased;
+
+			/** Tracking the drawn value keeps an interrupting change smooth. */
+			fromRef.current = next;
+			setDisplay(next);
+
+			if (progress < 1) {
+				frame = requestAnimationFrame(tick);
+			}
+		};
+		frame = requestAnimationFrame(tick);
+
+		return () => cancelAnimationFrame(frame);
+	}, [value, enabled, duration]);
+
+	return display;
+}
+
+/**
+ * Keeps a component mounted while it animates out, so overlays can fade/scale on
+ * close instead of vanishing the moment their flag flips to false.
+ */
+export function useMountTransition(open: boolean, duration = 200) {
+	const [mounted, setMounted] = useState(open);
+	const [visible, setVisible] = useState(false);
+
+	useEffect(() => {
+		if (open) {
+			setMounted(true);
+			/**
+			 * The element has to be painted with its "closed" styles once before we
+			 * flip them, or there is nothing to transition from. A timer rather than
+			 * requestAnimationFrame — rAF is throttled when the window is inactive.
+			 */
+			const frame = setTimeout(() => setVisible(true), 10);
+			return () => clearTimeout(frame);
+		}
+
+		setVisible(false);
+		const timer = setTimeout(() => setMounted(false), duration);
+		return () => clearTimeout(timer);
+	}, [open, duration]);
+
+	return { mounted, visible };
 }

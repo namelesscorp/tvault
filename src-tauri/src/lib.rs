@@ -1,6 +1,5 @@
 use once_cell::sync::Lazy;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::process::Command;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_single_instance;
 use tauri_plugin_fs;
@@ -102,6 +101,22 @@ fn remove_dir(path: String, recursive: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn remove_file(path: String) -> Result<(), String> {
+    use std::fs;
+    use std::path::Path;
+
+    let p = Path::new(&path);
+    if !p.exists() {
+        return Ok(());
+    }
+    if !p.is_file() {
+        return Err(format!("not a file: {path}"));
+    }
+
+    fs::remove_file(p).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn open_path_native(path: String) -> Result<(), String> {
     use std::path::Path;
     use std::process::Command;
@@ -109,7 +124,6 @@ fn open_path_native(path: String) -> Result<(), String> {
     if !p.exists() {
         return Err(format!("Path does not exist: {}", path));
     }
-    let is_dir = p.is_dir();
 
     #[cfg(target_os = "linux")]
     {
@@ -225,8 +239,9 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             #[cfg(desktop)]
-            app.handle().plugin(tauri_plugin_updater::Builder::new().build());
-            app.handle().plugin(tauri_plugin_process::init());
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
+            app.handle().plugin(tauri_plugin_process::init())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -234,6 +249,7 @@ pub fn run() {
             check_container_path,
             check_file_exists,
             remove_dir,
+            remove_file,
             scan_containers_directory,
             run_encrypt,
             run_decrypt,

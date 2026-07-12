@@ -4,7 +4,5 @@ export { useDecrypt } from "./useDecrypt";
 export { useEncrypt } from "./useEncrypt";
 export { useVault } from "./useVault";
 export { useVaultStateReset } from "./useVaultStateReset";
-export { useWizardStepTracking } from "./useWizardStepTracking";
-export { useWizardNavigation } from "./useWizardNavigation";
 export { useReseal } from "./useReseal";
 export { useBackgroundContainerScan } from "./useBackgroundContainerScan";

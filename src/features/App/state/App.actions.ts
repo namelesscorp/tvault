@@ -4,7 +4,11 @@ import {
 	createAsyncOnceGuard,
 	devError,
 	devInfo,
+	getCachedAnimations,
+	getCachedAutoUpdate,
 	getCachedLocale,
+	setCachedAnimations,
+	setCachedAutoUpdate,
 	setCachedLocale,
 } from "utils";
 import { AppDispatch, AppGetState } from "features/Store";
@@ -13,13 +17,19 @@ import { vaultSetRecent } from "features/Vault/state/Vault.actions";
 import {
 	cleanupNonExistentContainers,
 	loadVaultSettingsFromCache,
-	vaultScanContainersDirectory,
+	vaultScanAllContainersDirectories,
 } from "features/Vault/state/Vault.actions";
 import { appSlice } from "./App.reducer";
 import { selectAppInited } from "./App.selectors";
 import { AppSlice } from "./App.slice";
 
-export const { appSetInited, appSetLoaded, appSetLocale } = appSlice.actions;
+export const {
+	appSetInited,
+	appSetLoaded,
+	appSetLocale,
+	appSetAnimations,
+	appSetAutoUpdate,
+} = appSlice.actions;
 
 const appInitImpl = async (dispatch: AppDispatch, getState: AppGetState) => {
 	const appInited = selectAppInited(getState());
@@ -37,6 +47,24 @@ const appInitImpl = async (dispatch: AppDispatch, getState: AppGetState) => {
 			devInfo("Loaded cached locale:", cachedLocale);
 		} catch (e) {
 			devError("Failed to load cached locale", e);
+		}
+
+		// load the animations preference from cache
+		try {
+			const cachedAnimations = await getCachedAnimations();
+			dispatch(appSetAnimations(cachedAnimations));
+			devInfo("Loaded cached animations preference:", cachedAnimations);
+		} catch (e) {
+			devError("Failed to load cached animations preference", e);
+		}
+
+		// load the auto update preference from cache
+		try {
+			const cachedAutoUpdate = await getCachedAutoUpdate();
+			dispatch(appSetAutoUpdate(cachedAutoUpdate));
+			devInfo("Loaded cached auto update preference:", cachedAutoUpdate);
+		} catch (e) {
+			devError("Failed to load cached auto update preference", e);
 		}
 
 		// load vault settings from cache
@@ -72,19 +100,22 @@ const appInitImpl = async (dispatch: AppDispatch, getState: AppGetState) => {
 			devError("Failed to load recent containers", e);
 		}
 
-		// scan containers directory if path is set (after loading from store)
+		// scan containers directories if any path is set (after loading from store)
 		try {
 			const state = getState() as any;
-			const containersPath = state.vault?.containersPath;
-			devInfo("Checking containers path for scanning:", containersPath);
-			if (containersPath) {
+			const containersPaths: string[] =
+				state.vault?.containersPaths ?? [];
+			devInfo("Checking containers paths for scanning:", containersPaths);
+			if (containersPaths.length > 0) {
 				devInfo("Starting scan during app initialization");
-				await dispatch(vaultScanContainersDirectory(containersPath));
+				await dispatch(
+					vaultScanAllContainersDirectories(containersPaths),
+				);
 			} else {
-				devInfo("No containers path set, skipping scan");
+				devInfo("No containers paths set, skipping scan");
 			}
 		} catch (e) {
-			devError("Failed to scan containers directory", e);
+			devError("Failed to scan containers directories", e);
 		}
 
 		// cleanup non-existent containers on startup
@@ -102,6 +133,30 @@ const appInitImpl = async (dispatch: AppDispatch, getState: AppGetState) => {
 };
 
 export const appInit = createAsyncOnceGuard(appInitImpl);
+
+export const appChangeAnimations = (enabled: boolean) => {
+	return async (dispatch: AppDispatch) => {
+		dispatch(appSetAnimations(enabled));
+		try {
+			await setCachedAnimations(enabled);
+			devInfo("Animations preference changed and cached:", enabled);
+		} catch (e) {
+			devError("Failed to cache animations preference", e);
+		}
+	};
+};
+
+export const appChangeAutoUpdate = (enabled: boolean) => {
+	return async (dispatch: AppDispatch) => {
+		dispatch(appSetAutoUpdate(enabled));
+		try {
+			await setCachedAutoUpdate(enabled);
+			devInfo("Auto update preference changed and cached:", enabled);
+		} catch (e) {
+			devError("Failed to cache auto update preference", e);
+		}
+	};
+};
 
 // Action for changing language with cache saving
 export const appChangeLocale = (locale: AppSlice["locale"]) => {

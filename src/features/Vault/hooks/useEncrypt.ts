@@ -95,12 +95,21 @@ const useEncrypt = (wizardState: VaultWizardState) => {
 		if (!result)
 			return null as null | { masterToken?: string; shares?: string[] };
 		const obj = result as Record<string, unknown>;
-		const masterToken = (obj["master_token"] as string) || undefined;
 		const tokenList = (obj["token_list"] as string[]) || undefined;
 		const shareList =
 			(obj["share_list"] as Record<string, string>) || undefined;
-		const shares =
-			tokenList ?? (shareList ? Object.values(shareList) : undefined);
+		const list = tokenList ?? (shareList ? Object.values(shareList) : []);
+
+		/**
+		 * The core reports every token in `token_list` — a master vault simply gets
+		 * a list of one. There is no `master_token` field, so reading one left the
+		 * "vault created" screen with nothing to show.
+		 */
+		const isMaster = wizardState.tokenType === "master";
+		const masterToken = isMaster
+			? ((obj["master_token"] as string) ?? list[0])
+			: undefined;
+		const shares = isMaster ? undefined : list;
 
 		return { masterToken, shares };
 	})();
