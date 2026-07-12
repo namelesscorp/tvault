@@ -10,6 +10,7 @@ import {
 	getLocalizedErrorMessage,
 	getMountPathWithFallback,
 	openPathUniversal,
+	stripTokenLabel,
 } from "utils";
 import { useLocale } from "features/Localization";
 import { modalSetBusy, modalSetOpen } from "features/Modal/state/Modal.actions";
@@ -134,8 +135,14 @@ const ModalOpen = () => {
 		hmac: "",
 	});
 
+	/**
+	 * Shares are copied out of the create screen as "Token #1: …", so accept that
+	 * form back: pasting the label along with the token is the obvious mistake, and
+	 * the core would just report a wrong share.
+	 */
 	const update = useCallback((idx: number, val: string) => {
-		setShares(prev => prev.map((s, i) => (i === idx ? val : s)));
+		const share = stripTokenLabel(val);
+		setShares(prev => prev.map((s, i) => (i === idx ? share : s)));
 	}, []);
 
 	const handleAddShare = useCallback(() => {
@@ -473,7 +480,9 @@ const ModalOpen = () => {
 								id: "modal.open.placeholder.master",
 							})}
 							value={masterToken}
-							onChange={e => setMasterToken(e.target.value)}
+							onChange={e =>
+								setMasterToken(stripTokenLabel(e.target.value))
+							}
 						/>
 					)}
 					{isShare &&

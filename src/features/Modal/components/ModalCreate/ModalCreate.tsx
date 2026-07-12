@@ -14,7 +14,13 @@ import {
 import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { cn, devError, getLocalizedErrorMessage } from "utils";
+import {
+	cn,
+	devError,
+	formatTokenList,
+	getLocalizedErrorMessage,
+	toFileName,
+} from "utils";
 import { EntropyCanvas } from "features/EntropyCanvas";
 import { useLocale } from "features/Localization";
 import {
@@ -377,8 +383,8 @@ const ModalCreate = () => {
 	}, [comment, dispatch, name, tags, wizard]);
 
 	const commitFolders = useCallback(async () => {
-		const safeName = (name.trim() || "vault").replace(/[<>:"/\\|?*]/g, "_");
-		const outputPath = await join(vaultFolder, `${safeName}.tvlt`);
+		/** The typed name lives on in the metadata; the file itself gets no spaces. */
+		const outputPath = await join(vaultFolder, `${toFileName(name)}.tvlt`);
 
 		/** Refuses to overwrite an existing container and pre-creates the parents. */
 		try {
@@ -1176,7 +1182,7 @@ const ModalCreate = () => {
 									() =>
 										downloadJson(
 											{ password: secretPassword },
-											`${wizard.name || "vault"}.password.json`,
+											`${toFileName(wizard.name)}.password.json`,
 										),
 								)}
 							/>
@@ -1206,7 +1212,7 @@ const ModalCreate = () => {
 									() =>
 										downloadJson(
 											{ master_token: masterToken },
-											`${wizard.name || "vault"}.master.json`,
+											`${toFileName(wizard.name)}.master.json`,
 										),
 								)}
 							/>
@@ -1232,11 +1238,11 @@ const ModalCreate = () => {
 								})}
 								iconColor={green}
 								right={actions(
-									() => copy(shares.join("\n")),
+									() => copy(formatTokenList(shares)),
 									() =>
 										downloadJson(
 											{ token_list: shares },
-											`${wizard.name || "vault"}.shares.json`,
+											`${toFileName(wizard.name)}.shares.json`,
 										),
 								)}
 							/>
@@ -1289,7 +1295,7 @@ const ModalCreate = () => {
 												integrity_password:
 													wizard.additionalPassword,
 											},
-											`${wizard.name || "vault"}.integrity.json`,
+											`${toFileName(wizard.name)}.integrity.json`,
 										),
 								)}
 							/>

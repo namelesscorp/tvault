@@ -22,6 +22,35 @@ export function replaceDashesWithSpaces(path: string) {
 
 export const capitalize = (s: string) => s && s[0].toUpperCase() + s.slice(1);
 
+/**
+ * Turns a vault name into a file name: the name the user typed stays untouched in
+ * the container metadata, but the file it lives in gets no spaces (they need
+ * quoting in a shell and travel badly between systems) and none of the characters
+ * a filesystem would reject.
+ */
+export const toFileName = (name: string, fallback = "vault"): string => {
+	const safe = name
+		.trim()
+		/** A run of spaces becomes one underscore, not one per space. */
+		.replace(/\s+/g, "_")
+		.replace(/[<>:"/\\|?*]/g, "_")
+		/** A name made only of those characters would come out as "____". */
+		.replace(/^[._]+|[._]+$/g, "");
+
+	return safe || fallback;
+};
+
+/**
+ * The share list is copied as one block, so each token is labelled — pasting a bare
+ * wall of strings back into the unlock form is how people mix up which share is which.
+ */
+export const formatTokenList = (tokens: string[]): string =>
+	tokens.map((token, index) => `Token #${index + 1}: ${token}`).join("\n");
+
+/** Undoes the label above, so a pasted "Token #2: abc" still unlocks the vault. */
+export const stripTokenLabel = (value: string): string =>
+	value.replace(/^\s*token\s*#?\s*\d+\s*:\s*/i, "");
+
 /** Byte sizes reported by the core (compressed_size / uncompressed_size). */
 export const formatBytes = (bytes?: number): string => {
 	if (typeof bytes !== "number" || bytes < 0) return "—";
