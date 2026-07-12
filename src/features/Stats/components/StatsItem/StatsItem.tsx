@@ -20,13 +20,10 @@ const StatsItem = ({
 	return (
 		<div
 			className={cn(
-				"flex justify-between h-[120px] p-[15px] rounded-[10px] border",
+				"flex justify-between h-[120px] p-[15px] rounded-[10px] border bg-surface card-shadow",
 				{
-					"bg-[#ffffff]/3": resolved === "dark",
-					"bg-[#ffffff]/80": resolved === "light",
 					"border-[#313A4F]/10": resolved === "dark",
 					"border-[#000000]/70": resolved === "light",
-					"card-shadow": resolved === "light",
 				},
 			)}>
 			<div>

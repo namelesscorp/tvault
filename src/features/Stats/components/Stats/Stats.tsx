@@ -1,5 +1,13 @@
+import { useMemo } from "react";
 import { useIntl } from "react-intl";
+import { useSelector } from "react-redux";
+import { getSecurityScore } from "features/Dashboard/Dashboard.utils";
 import { useTheme } from "features/Theme";
+import {
+	selectVaultContainerInfo,
+	selectVaultContainers,
+	selectVaultRecent,
+} from "features/Vault/state/Vault.selectors";
 import { icons } from "~/assets/collections/icons";
 import { StatsItem } from "../StatsItem";
 
@@ -7,13 +15,37 @@ const Stats = () => {
 	const { formatMessage } = useIntl();
 	const { resolved } = useTheme();
 
+	const containers = useSelector(selectVaultContainers);
+	const recent = useSelector(selectVaultRecent);
+	const infoMap = useSelector(selectVaultContainerInfo);
+
+	const knownPaths = useMemo(
+		() =>
+			Array.from(
+				new Set([
+					...Object.keys(containers),
+					...recent.map(r => r.path),
+				]),
+			),
+		[containers, recent],
+	);
+
+	const securityScore = useMemo(() => {
+		if (knownPaths.length === 0) return 0;
+		const total = knownPaths.reduce(
+			(sum, path) => sum + getSecurityScore(infoMap[path]),
+			0,
+		);
+		return Math.round(total / knownPaths.length);
+	}, [knownPaths, infoMap]);
+
 	return (
 		<div className="grid grid-cols-4 gap-[40px]">
 			<StatsItem
 				title={formatMessage({ id: "stats.1" })}
-				value={"4"}
+				value={String(knownPaths.length)}
 				icon={icons.folder_shield}
-				color={resolved === "dark" ? "#538DD5" : "#1353A3"}
+				color={"var(--accent)"}
 				subcolor={
 					resolved === "dark" ? "#20314D" : "rgba(154, 199, 255, 0.5)"
 				}
@@ -38,9 +70,9 @@ const Stats = () => {
 			/>
 			<StatsItem
 				title={formatMessage({ id: "stats.4" })}
-				value={"94%"}
+				value={`${securityScore}%`}
 				icon={icons.shield}
-				color={resolved === "dark" ? "#49DE80" : "#2E9253"}
+				color={"var(--success)"}
 				subcolor={resolved === "dark" ? "#253C44" : "#DAF4E0"}
 			/>
 		</div>

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { cn } from "utils";
-import { useTheme } from "features/Theme";
 import { icons } from "assets";
 import { UIInput } from "../UIInput";
 
@@ -23,7 +22,6 @@ const UIPasswordField = ({
 	disabled,
 }: UIPasswordFieldProps) => {
 	const [show, setShow] = useState(false);
-	const { resolved } = useTheme();
 
 	return (
 		<div className="relative" style={style}>
@@ -42,10 +40,7 @@ const UIPasswordField = ({
 				className={cn(
 					"absolute right-[10px] top-1/2 transform -translate-y-1/2 w-[30px] h-[30px] flex items-center justify-center cursor-pointer mask-size-[20px] transition-all duration-300 rounded-[10px]",
 					{
-						"bg-white": resolved === "dark",
-						"bg-black": resolved === "light",
-						"hover:bg-white/80": resolved === "dark",
-						"hover:bg-black/80": resolved === "light",
+						"bg-fg-strong hover:opacity-80": true,
 					},
 				)}
 				style={{

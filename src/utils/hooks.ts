@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Hook for creating a function that executes only once
@@ -147,4 +147,32 @@ export function useRequestGuard<T extends (...args: any[]) => Promise<any>>(
 		reset,
 		isLoading: loadingRef.current,
 	};
+}
+
+/**
+ * Keeps a component mounted while it animates out, so overlays can fade/scale on
+ * close instead of vanishing the moment their flag flips to false.
+ */
+export function useMountTransition(open: boolean, duration = 200) {
+	const [mounted, setMounted] = useState(open);
+	const [visible, setVisible] = useState(false);
+
+	useEffect(() => {
+		if (open) {
+			setMounted(true);
+			/**
+			 * The element has to be painted with its "closed" styles once before we
+			 * flip them, or there is nothing to transition from. A timer rather than
+			 * requestAnimationFrame — rAF is throttled when the window is inactive.
+			 */
+			const frame = setTimeout(() => setVisible(true), 10);
+			return () => clearTimeout(frame);
+		}
+
+		setVisible(false);
+		const timer = setTimeout(() => setMounted(false), duration);
+		return () => clearTimeout(timer);
+	}, [open, duration]);
+
+	return { mounted, visible };
 }

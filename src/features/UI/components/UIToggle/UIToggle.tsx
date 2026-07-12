@@ -1,5 +1,4 @@
 import { cn } from "utils";
-import { useTheme } from "features/Theme";
 
 interface UIToggleProps {
 	checked: boolean;
@@ -14,8 +13,6 @@ const UIToggle = ({
 	disabled = false,
 	className,
 }: UIToggleProps) => {
-	const { resolved } = useTheme();
-
 	return (
 		<button
 			type="button"
@@ -26,10 +23,8 @@ const UIToggle = ({
 			className={cn(
 				"relative w-[45px] h-[25px] rounded-[30px] transition-all duration-300 cursor-pointer shrink-0",
 				{
-					"bg-[#2463EB]": checked && resolved === "dark",
-					"bg-[#3A73ED]": checked && resolved === "light",
-					"bg-white/15": !checked && resolved === "dark",
-					"bg-black/15": !checked && resolved === "light",
+					"bg-accent-blue": checked,
+					"bg-track": !checked,
 					"cursor-default opacity-50": disabled,
 				},
 				className,

@@ -1,22 +1,31 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { Fragment } from "react/jsx-runtime";
-import { cn, getMountPathWithFallback, openPathUniversal } from "utils";
-import { devError } from "utils";
-import { modalSetOpen } from "features/Modal/state/Modal.actions";
+import {
+	cn,
+	devError,
+	getLocalizedErrorMessage,
+	getMountPathWithFallback,
+	openPathUniversal,
+} from "utils";
+import { useLocale } from "features/Localization";
+import { modalSetBusy, modalSetOpen } from "features/Modal/state/Modal.actions";
 import { useAppDispatch } from "features/Store";
 import { useTheme } from "features/Theme";
 import { UIButton, UIImgIcon, UIInput, UIPasswordField } from "features/UI";
+import { ResealData } from "features/Vault/Vault.model";
 import { useDecrypt } from "features/Vault/hooks/useDecrypt";
 import {
 	vaultAddContainer,
 	vaultAddRecentWithMountPath,
+	vaultAddResealData,
 	vaultSetOpenWizardState,
 } from "features/Vault/state/Vault.actions";
 import {
+	selectVaultContainerInfo,
 	selectVaultOpenWizardState,
 	selectVaultRecent,
 } from "features/Vault/state/Vault.selectors";
@@ -64,6 +73,9 @@ const TokenIconButton = ({
 					? "#9AC7FF"
 					: "#1353A3";
 
+	const plain = variant === "plain";
+	const size = plain ? 30 : 24;
+
 	return (
 		<button
 			type="button"
@@ -71,25 +83,26 @@ const TokenIconButton = ({
 			disabled={disabled}
 			style={{ backgroundColor: background }}
 			className={cn(
-				"flex items-center justify-center w-[40px] h-[40px] rounded-[10px] transition-all duration-300 cursor-pointer",
+				"flex items-center justify-center w-[40px] h-[40px] rounded-[10px] transition-all duration-200 cursor-pointer",
 				{
 					"opacity-50 cursor-default": disabled,
 					"hover:opacity-80": !disabled,
 				},
 			)}>
-			<UIImgIcon icon={icon} width={20} height={20} color={color} />
+			<UIImgIcon icon={icon} width={size} height={size} color={color} />
 		</button>
 	);
 };
 
 const ModalOpen = () => {
-	const { resolved } = useTheme();
 	const { formatMessage } = useIntl();
+	const { locale } = useLocale();
 	const openWizardState = useSelector(selectVaultOpenWizardState);
 	const recent = useSelector(selectVaultRecent);
+	const infoMap = useSelector(selectVaultContainerInfo);
 	const dispatch = useAppDispatch();
 
-	const { progress, done, error, run } = useDecrypt();
+	const { done, error, failed, busy, run } = useDecrypt();
 
 	const [shares, setShares] = useState<string[]>(
 		openWizardState.shares && openWizardState.shares.length >= MIN_SHARES
@@ -104,6 +117,16 @@ const ModalOpen = () => {
 	const [password, setPassword] = useState("");
 	const [masterToken, setMasterToken] = useState("");
 	const [usedFolderPath, setUsedFolderPath] = useState("");
+
+	const savedRef = useRef(false);
+	const notifiedRef = useRef(false);
+	const credentialsRef = useRef({
+		password: "",
+		masterToken: "",
+		shares: [] as string[],
+		tokenJsonPath: "",
+		hmac: "",
+	});
 
 	const update = useCallback((idx: number, val: string) => {
 		setShares(prev => prev.map((s, i) => (i === idx ? val : s)));
@@ -202,8 +225,18 @@ const ModalOpen = () => {
 			return;
 		}
 
+		notifiedRef.current = false;
+
 		const folderPath = await resolveFolderPath();
 		setUsedFolderPath(folderPath);
+
+		credentialsRef.current = {
+			password,
+			masterToken,
+			shares: readyShares,
+			tokenJsonPath,
+			hmac,
+		};
 
 		const additionalPassword =
 			openWizardState.integrityProvider === "hmac" ? hmac : undefined;
@@ -255,10 +288,35 @@ const ModalOpen = () => {
 	]);
 
 	useEffect(() => {
-		if (!done || error) return;
+		dispatch(modalSetBusy(busy));
+	}, [busy, dispatch]);
+
+	/**
+	 * `decrypt-done: false` arrives just before `decrypt-error`, so wait a tick —
+	 * the cleanup re-schedules this with the specific message once it lands.
+	 */
+	useEffect(() => {
+		if (!failed || notifiedRef.current) return;
+
+		const timer = setTimeout(() => {
+			notifiedRef.current = true;
+			toast.error(
+				error
+					? getLocalizedErrorMessage(error, formatMessage, locale)
+					: formatMessage({ id: "modal.open.error.failed" }),
+			);
+		}, 150);
+
+		return () => clearTimeout(timer);
+	}, [error, failed, formatMessage, locale]);
+
+	useEffect(() => {
+		if (!done || error || failed || savedRef.current) return;
 
 		const containerPath = openWizardState.containerPath;
 		if (!containerPath || !usedFolderPath) return;
+
+		savedRef.current = true;
 
 		dispatch(
 			vaultAddContainer({
@@ -272,40 +330,67 @@ const ModalOpen = () => {
 				mountPath: usedFolderPath,
 			}),
 		);
+
+		/**
+		 * The credentials the user just typed are the only thing that can repack
+		 * the container later, so keep them around for the reseal on close/edit.
+		 */
+		const { password, masterToken, shares, tokenJsonPath, hmac } =
+			credentialsRef.current;
+		const additionalPassword =
+			openWizardState.integrityProvider === "hmac" ? hmac : undefined;
+
+		const resealData: ResealData = {
+			containerPath,
+			mountDir: usedFolderPath,
+			containerInfo: infoMap[containerPath] ?? ({} as any),
+			passphrase: isPassword ? password : undefined,
+			masterToken: isMaster ? masterToken : undefined,
+			shares: isShare && !tokenJsonPath ? shares : undefined,
+			tokenJsonPath: isShare ? tokenJsonPath || undefined : undefined,
+			additionalPassword,
+			originalAdditionalPassword: additionalPassword,
+			method: openWizardState.method,
+			tokenType: openWizardState.tokenType,
+			integrityProvider: openWizardState.integrityProvider,
+		};
+		dispatch(vaultAddResealData(resealData));
+
 		dispatch(modalSetOpen(false));
 		(async () => {
 			try {
 				await openPathUniversal(usedFolderPath);
 			} catch {}
 		})();
-	}, [done, error, dispatch, openWizardState, usedFolderPath]);
+	}, [
+		done,
+		error,
+		failed,
+		dispatch,
+		infoMap,
+		isMaster,
+		isPassword,
+		isShare,
+		openWizardState,
+		usedFolderPath,
+	]);
 
 	return (
 		<div>
 			<div
 				className={cn(
-					"w-full flex flex-col gap-[10px] border rounded-[10px] px-[15px] py-[10px]",
-					{
-						"bg-white/3": resolved === "dark",
-						"bg-white/80": resolved === "light",
-						"border-[#313A4F]": resolved === "dark",
-						"border-black/70": resolved === "light",
-					},
+					"w-full flex flex-col gap-[10px] border rounded-[10px] px-[15px] py-[10px] bg-surface border-line",
 				)}>
 				<div className="flex items-center gap-[10px]">
 					<UIImgIcon
 						icon={icons.key_2}
-						width={28}
-						height={28}
-						color={resolved === "dark" ? "#49DE80" : "#2E9253"}
+						width={29}
+						height={29}
+						color={"var(--success)"}
 					/>
 					<p
 						className={cn(
-							"text-[16px] font-semibold tracking-[-0.05em] ",
-							{
-								"text-white": resolved === "dark",
-								"text-black/80": resolved === "light",
-							},
+							"text-[16px] font-semibold tracking-[-0.05em]  text-fg",
 						)}>
 						{formatMessage({
 							id: `modal.open.info.title.${openWizardState.tokenType}`,
@@ -314,11 +399,7 @@ const ModalOpen = () => {
 				</div>
 				<p
 					className={cn(
-						"text-[16px] font-medium tracking-[-0.05em] ",
-						{
-							"text-white/70": resolved === "dark",
-							"text-black/70": resolved === "light",
-						},
+						"text-[16px] font-medium tracking-[-0.05em]  text-muted",
 					)}>
 					{formatMessage({
 						id: `modal.open.info.description.${openWizardState.tokenType}`,
@@ -329,11 +410,7 @@ const ModalOpen = () => {
 				<div className="flex items-center justify-between min-h-[40px]">
 					<p
 						className={cn(
-							"text-[20px] font-semibold leading-[120%] tracking-[-0.05em]",
-							{
-								"text-white": resolved === "dark",
-								"text-black/80": resolved === "light",
-							},
+							"text-[20px] font-semibold leading-[120%] tracking-[-0.05em] text-fg",
 						)}>
 						{formatMessage({
 							id: `modal.open.title.${openWizardState.tokenType}`,
@@ -420,11 +497,7 @@ const ModalOpen = () => {
 					<div className="flex flex-col gap-[15px] mt-[20px]">
 						<p
 							className={cn(
-								"text-[20px] font-semibold leading-[120%] tracking-[-0.05em]",
-								{
-									"text-white": resolved === "dark",
-									"text-black/80": resolved === "light",
-								},
+								"text-[20px] font-semibold leading-[120%] tracking-[-0.05em] text-fg",
 							)}>
 							{formatMessage({
 								id: `modal.open.title.hmac`,
@@ -447,20 +520,15 @@ const ModalOpen = () => {
 						noTheme
 						center
 						onClick={handleOpen}
-						disabled={!canUnlock || (progress > 0 && !done)}
+						disabled={!canUnlock || busy}
 						style={{
-							backgroundColor:
-								resolved === "dark" ? "#2463EB" : "#3A73ED",
+							backgroundColor: "var(--accent-blue)",
 							color: "#ffffff",
 						}}
 					/>
 					<p
 						className={cn(
-							"text-[16px] font-medium tracking-[-0.05em] text-center",
-							{
-								"text-black/70": resolved === "light",
-								"text-white/70": resolved === "dark",
-							},
+							"text-[16px] font-medium tracking-[-0.05em] text-center text-muted",
 						)}>
 						{formatMessage({ id: "modal.open.bottom.text" })}
 					</p>

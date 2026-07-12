@@ -19,6 +19,8 @@ const useDecrypt = () => {
 	const [progress, setProgress] = useState(0);
 	const [done, setDone] = useState(false);
 	const [error, setError] = useState<unknown | null>(null);
+	const [failed, setFailed] = useState(false);
+	const [busy, setBusy] = useState(false);
 	const runningRef = useRef(false);
 
 	useEffect(() => {
@@ -29,14 +31,27 @@ const useDecrypt = () => {
 		const un2 = listen<boolean>("decrypt-done", e => {
 			devLog("[tvault] decrypt done", e.payload);
 			setDone(e.payload);
-			if (e.payload) {
-				runningRef.current = false;
+			runningRef.current = false;
+			setBusy(false);
+			/** The CLI reports a wrong password/token as done=false. */
+			if (!e.payload) {
+				setProgress(0);
+				setFailed(true);
 			}
+		});
+		const un3 = listen<unknown>("decrypt-error", e => {
+			devError("[tvault] decrypt error", extractErrorMessage(e.payload));
+			setError(e.payload);
+			setFailed(true);
+			setProgress(0);
+			setBusy(false);
+			runningRef.current = false;
 		});
 
 		return () => {
 			un1.then(f => f());
 			un2.then(f => f());
+			un3.then(f => f());
 		};
 	}, []);
 
@@ -47,9 +62,11 @@ const useDecrypt = () => {
 		}
 
 		runningRef.current = true;
+		setBusy(true);
 		setProgress(0);
 		setDone(false);
 		setError(null);
+		setFailed(false);
 
 		const payload: Record<string, unknown> = {
 			container_path: args.containerPath,
@@ -85,12 +102,14 @@ const useDecrypt = () => {
 		} catch (err) {
 			devError("[tvault] run_decrypt failed", extractErrorMessage(err));
 			setError(err);
+			setFailed(true);
+			setBusy(false);
 			runningRef.current = false;
 			throw err;
 		}
 	};
 
-	return { progress, done, error, run };
+	return { progress, done, error, failed, busy, run };
 };
 
 export { useDecrypt };

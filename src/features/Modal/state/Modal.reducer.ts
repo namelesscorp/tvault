@@ -7,6 +7,8 @@ const initialState: ModalSlice = {
 	modalType: ModalTypes.SELECT,
 	modalTitle: "",
 	modalIcon: "",
+	modalPayload: "",
+	modalBusy: false,
 };
 
 export const modalSlice = createSlice({
@@ -15,6 +17,9 @@ export const modalSlice = createSlice({
 	reducers: {
 		modalSetOpen: (state, { payload }: PayloadAction<boolean>) => {
 			state.modalOpen = payload;
+			if (!payload) {
+				state.modalBusy = false;
+			}
 		},
 		modalSetType: (state, { payload }: PayloadAction<ModalTypes>) => {
 			state.modalType = payload;
@@ -24,6 +29,12 @@ export const modalSlice = createSlice({
 		},
 		modalSetIcon: (state, { payload }: PayloadAction<string>) => {
 			state.modalIcon = payload;
+		},
+		modalSetPayload: (state, { payload }: PayloadAction<string>) => {
+			state.modalPayload = payload;
+		},
+		modalSetBusy: (state, { payload }: PayloadAction<boolean>) => {
+			state.modalBusy = payload;
 		},
 	},
 });

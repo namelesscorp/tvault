@@ -16,3 +16,9 @@ export const selectModalTitle = (state: AppState): string =>
 
 export const selectModalIcon = (state: AppState): string =>
 	selectModalState(state)?.modalIcon ?? "";
+
+export const selectModalPayload = (state: AppState): string =>
+	selectModalState(state)?.modalPayload ?? "";
+
+export const selectModalBusy = (state: AppState): boolean =>
+	selectModalState(state)?.modalBusy ?? false;

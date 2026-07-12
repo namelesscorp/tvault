@@ -15,11 +15,9 @@ export const {
 	vaultRemoveRecent,
 	vaultSetWizardState,
 	vaultResetWizardState,
-	vaultUpdateWizardLastStep,
 	vaultSetWizardEncryptCompleted,
 	vaultSetOpenWizardState,
 	vaultResetOpenWizardState,
-	vaultUpdateOpenWizardLastStep,
 	vaultSetOpenWizardDecryptCompleted,
 	vaultUpdateRecentMountPath,
 	vaultAddResealData,
@@ -144,6 +142,33 @@ export const vaultAddRecentContainer = (path: string) => {
 		} catch (e) {
 			devError("Failed to add container file to recent", e);
 		}
+	};
+};
+
+/** Drops the container from the dashboard, leaving the file on disk. */
+export const vaultRemoveRecentContainer = (path: string) => {
+	return async (dispatch: AppDispatch, getState: AppGetState) => {
+		dispatch(vaultRemoveRecent(path));
+		dispatch(vaultRemoveResealData(path));
+		dispatch(vaultRemoveContainer(path));
+
+		await saveRecentToStore(getState().vault.recent);
+		devInfo("Removed container from dashboard:", path);
+	};
+};
+
+/** Deletes the container file itself, then drops it from the dashboard. */
+export const vaultDeleteContainer = (path: string) => {
+	return async (dispatch: AppDispatch, getState: AppGetState) => {
+		const { invoke } = await import("@tauri-apps/api/core");
+		await invoke("remove_file", { path });
+
+		dispatch(vaultRemoveRecent(path));
+		dispatch(vaultRemoveResealData(path));
+		dispatch(vaultRemoveContainer(path));
+
+		await saveRecentToStore(getState().vault.recent);
+		devInfo("Deleted container file:", path);
 	};
 };
 

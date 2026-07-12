@@ -4,6 +4,7 @@ export * from "./components/UIPasswordField";
 export * from "./components/UIButton";
 export * from "./components/UIIconButton";
 export * from "./components/UIImgIcon";
+export * from "./components/UIOverlay";
 export * from "./components/UIContainerRow";
 export * from "./components/UISectionHeading";
 export * from "./components/UIInput";

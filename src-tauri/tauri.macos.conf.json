@@ -1,0 +1,18 @@
+{
+	"$schema": "https://schema.tauri.app/config/2",
+	"app": {
+		"windows": [
+			{
+				"title": "Trust Vault",
+				"width": 1200,
+				"height": 800,
+				"resizable": false,
+				"decorations": true,
+				"titleBarStyle": "Overlay",
+				"hiddenTitle": true,
+				"transparent": false,
+				"shadow": true
+			}
+		]
+	}
+}

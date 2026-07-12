@@ -9,7 +9,12 @@ import { LocalizationTypes } from "features/Localization/Localization.model";
 import { useUpdater } from "features/Settings/hooks";
 import { useAppDispatch } from "features/Store";
 import { useTheme } from "features/Theme";
-import { UIImgIcon, UIToggle } from "features/UI";
+import { UIImgIcon, UIOverlay, UIToggle } from "features/UI";
+import {
+	vaultAddContainersPathAndScan,
+	vaultRemoveContainersPathFromCache,
+} from "features/Vault/state/Vault.actions";
+import { selectVaultContainersPaths } from "features/Vault/state/Vault.selectors";
 import { icons } from "assets";
 import { modalSetOpen } from "../../state/Modal.actions";
 
@@ -69,7 +74,7 @@ const ModalButton = ({
 			disabled={disabled}
 			style={{ width: `${width}px`, backgroundColor: bg }}
 			className={cn(
-				"flex items-center justify-center gap-[10px] h-[40px] rounded-[10px] border text-[16px] font-medium tracking-[-0.05em] whitespace-nowrap transition-all duration-300 cursor-pointer",
+				"flex items-center justify-center gap-[10px] h-[40px] rounded-[10px] border text-[16px] font-medium tracking-[-0.05em] whitespace-nowrap transition-all duration-200 cursor-pointer",
 				{
 					"bg-white/3 border-[#313A4F]":
 						neutral && resolved === "dark",
@@ -77,6 +82,11 @@ const ModalButton = ({
 						neutral && resolved === "light",
 					"border-transparent": !neutral,
 					"opacity-50 cursor-default": disabled,
+					"hover:bg-white/8":
+						!disabled && neutral && resolved === "dark",
+					"hover:bg-white":
+						!disabled && neutral && resolved === "light",
+					"hover:brightness-110": !disabled && !neutral,
 				},
 			)}>
 			<UIImgIcon icon={icon} width={20} height={20} color={textColor} />
@@ -166,58 +176,65 @@ const LanguageSelect = () => {
 };
 
 const SettingsRow = ({
+	icon,
 	title,
 	description,
 	control,
+	below,
 }: {
+	icon: string;
 	title: string;
 	description: string;
 	control: React.ReactNode;
+	below?: React.ReactNode;
 }) => {
-	const { resolved } = useTheme();
-
 	return (
 		<div
 			className={cn(
-				"flex items-center justify-between gap-[20px] min-h-[42px] py-[15px] first:pt-0 last:pb-0 border-b last:border-b-0",
-				{
-					"border-[#313A4F]": resolved === "dark",
-					"border-black/70": resolved === "light",
-				},
+				"py-[15px] first:pt-0 last:pb-0 border-b last:border-b-0 border-line",
 			)}>
-			<div className="flex flex-col gap-[7px]">
-				<p
-					className={cn(
-						"text-[18px] font-medium tracking-[-0.05em]",
-						{
-							"text-white": resolved === "dark",
-							"text-black/80": resolved === "light",
-						},
-					)}>
-					{title}
-				</p>
-				<p
-					className={cn(
-						"text-[11px] font-semibold tracking-[-0.05em]",
-						{
-							"text-white/70": resolved === "dark",
-							"text-black/70": resolved === "light",
-						},
-					)}>
-					{description}
-				</p>
+			<div className="flex items-center justify-between gap-[20px] min-h-[42px]">
+				<div className="flex items-center gap-[15px]">
+					<UIImgIcon
+						icon={icon}
+						width={24}
+						height={24}
+						color={"var(--accent)"}
+					/>
+					<div className="flex flex-col gap-[7px]">
+						<p
+							className={cn(
+								"text-[18px] font-medium tracking-[-0.05em] text-fg",
+							)}>
+							{title}
+						</p>
+						<p
+							className={cn(
+								"text-[11px] font-semibold tracking-[-0.05em] text-muted",
+							)}>
+							{description}
+						</p>
+					</div>
+				</div>
+				<div className="shrink-0">{control}</div>
 			</div>
-			<div className="shrink-0">{control}</div>
+			{below}
 		</div>
 	);
 };
 
-const ModalSettings = () => {
+const ModalSettings = ({
+	visible = true,
+	onClose,
+}: {
+	visible?: boolean;
+	onClose?: () => void;
+}) => {
 	const { formatMessage } = useIntl();
 	const { resolved, setPreference } = useTheme();
 	const dispatch = useAppDispatch();
+	const containersPaths = useSelector(selectVaultContainersPaths);
 
-	const [mounted, setMounted] = useState(false);
 	const [activeTab, setActiveTab] = useState<SettingsTab>(
 		SettingsTab.Interface,
 	);
@@ -240,18 +257,23 @@ const ModalSettings = () => {
 	} = useUpdater();
 
 	useEffect(() => {
-		setMounted(true);
-	}, []);
-
-	useEffect(() => {
 		initializeVersion();
 	}, [initializeVersion]);
 
-	const handleClose = () => dispatch(modalSetOpen(false));
+	const handleClose = () =>
+		onClose ? onClose() : dispatch(modalSetOpen(false));
 
 	const handleReset = () => {
 		setNotifications(DEFAULT_NOTIFICATIONS);
 		setImportPath("");
+	};
+
+	/** Folders scanned in the background for containers (see useBackgroundContainerScan). */
+	const handleAddContainersPath = async () => {
+		const dir = await open({ directory: true, multiple: false });
+		if (typeof dir === "string") {
+			await dispatch(vaultAddContainersPathAndScan(dir));
+		}
 	};
 
 	const handleImport = async () => {
@@ -281,18 +303,13 @@ const ModalSettings = () => {
 	];
 
 	return (
-		<div
-			className={cn(
-				"fixed top-0 left-0 w-full h-full flex items-center justify-center backdrop-blur-sm transition-opacity duration-300",
-				mounted ? "opacity-100" : "opacity-0",
-			)}>
+		<UIOverlay visible={visible} onClose={handleClose}>
 			<div
 				className={cn(
-					"w-[1000px] max-w-[96vw] rounded-[10px] flex flex-col transition-all duration-300 origin-center",
-					mounted ? "opacity-100 scale-100" : "opacity-0 scale-95",
+					"w-[1000px] max-w-[96vw] rounded-[10px] flex flex-col transition-all duration-200 ease-out origin-center bg-panel",
 					{
-						"bg-[#1E293B]": resolved === "dark",
-						"bg-[#F5F7FF]": resolved === "light",
+						"opacity-100 scale-100 translate-y-0": visible,
+						"opacity-0 scale-95 translate-y-[10px]": !visible,
 					},
 				)}>
 				{/* header */}
@@ -300,37 +317,27 @@ const ModalSettings = () => {
 					<div className="flex items-center gap-[10px]">
 						<div
 							className={cn(
-								"flex items-center justify-center w-[50px] h-[50px] rounded-[10px] shrink-0",
-								{
-									"bg-[#20314D]": resolved === "dark",
-									"bg-[#9AC7FF]": resolved === "light",
-								},
+								"flex items-center justify-center w-[50px] h-[50px] rounded-[10px] shrink-0 bg-badge",
 							)}>
 							<UIImgIcon
 								icon={icons.settings}
 								width={30}
 								height={30}
-								color={
-									resolved === "dark" ? "#538DD5" : "#1353A3"
-								}
+								color={"var(--accent)"}
 							/>
 						</div>
 						<p
 							className={cn(
-								"text-[24px] font-bold tracking-[-0.05em]",
-								{
-									"text-white": resolved === "dark",
-									"text-black/80": resolved === "light",
-								},
+								"text-[24px] font-bold tracking-[-0.05em] text-fg",
 							)}>
 							{formatMessage({ id: "settings.title" })}
 						</p>
 					</div>
 					<UIImgIcon
 						icon={icons.close}
-						width={13}
-						height={13}
-						color={resolved === "dark" ? "#ffffff" : "#000000"}
+						width={25}
+						height={25}
+						color={"var(--fg-strong)"}
 						pointer
 						onClick={handleClose}
 					/>
@@ -339,11 +346,7 @@ const ModalSettings = () => {
 				{/* subtitle */}
 				<p
 					className={cn(
-						"px-[15px] text-[16px] font-medium tracking-[-0.05em]",
-						{
-							"text-white/70": resolved === "dark",
-							"text-black/70": resolved === "light",
-						},
+						"px-[15px] text-[16px] font-medium tracking-[-0.05em] text-muted",
 					)}>
 					{formatMessage({ id: "settings.modal.subtitle" })}
 				</p>
@@ -368,13 +371,10 @@ const ModalSettings = () => {
 									type="button"
 									onClick={() => setActiveTab(tab.key)}
 									className={cn(
-										"flex-1 h-[40px] text-[16px] font-medium tracking-[-0.05em] transition-all duration-300 cursor-pointer",
+										"flex-1 h-[40px] text-[16px] font-medium tracking-[-0.05em] transition-all duration-300 cursor-pointer text-fg-soft",
 										{
 											"border-l": index !== 0,
 											"border-[#313A4F]": index !== 0,
-											"text-white": resolved === "dark",
-											"text-black/70":
-												resolved === "light",
 											"bg-white/8":
 												active && resolved === "dark",
 											"bg-black/5":
@@ -407,6 +407,71 @@ const ModalSettings = () => {
 						{activeTab === SettingsTab.Interface && (
 							<>
 								<SettingsRow
+									icon={icons.folder}
+									title={formatMessage({
+										id: "settings.containersPath",
+									})}
+									description={formatMessage({
+										id: "settings.modal.containersPath.description",
+									})}
+									control={
+										<ModalButton
+											icon={icons.folder}
+											text={formatMessage({
+												id: "settings.addFolder",
+											})}
+											onClick={handleAddContainersPath}
+											variant="green"
+											width={200}
+										/>
+									}
+									below={
+										containersPaths.length > 0 && (
+											<div className="flex flex-col gap-[10px] pt-[15px]">
+												{containersPaths.map(path => (
+													<div
+														key={path}
+														className="flex items-center gap-[10px]">
+														<input
+															value={path}
+															readOnly
+															className={cn(
+																"flex-1 h-[40px] px-[14px] rounded-[10px] border text-[16px] font-medium tracking-[-0.05em] outline-none",
+																{
+																	"bg-white/3 border-[#313A4F] text-white":
+																		resolved ===
+																		"dark",
+																	"bg-white/80 border-black/70 text-black":
+																		resolved ===
+																		"light",
+																},
+															)}
+														/>
+														<ModalButton
+															icon={icons.minus}
+															text={formatMessage(
+																{
+																	id: "common.remove",
+																},
+															)}
+															onClick={() =>
+																dispatch(
+																	vaultRemoveContainersPathFromCache(
+																		path,
+																	),
+																)
+															}
+															variant="neutral"
+															width={121}
+														/>
+													</div>
+												))}
+											</div>
+										)
+									}
+								/>
+								<SettingsRow
+									icon={icons.moon}
 									title={formatMessage({
 										id: "settings.modal.darkMode.title",
 									})}
@@ -425,6 +490,7 @@ const ModalSettings = () => {
 									}
 								/>
 								<SettingsRow
+									icon={icons.globe}
 									title={formatMessage({
 										id: "settings.modal.language.title",
 									})}
@@ -439,6 +505,7 @@ const ModalSettings = () => {
 						{activeTab === SettingsTab.Notifications && (
 							<>
 								<SettingsRow
+									icon={icons.unlock}
 									title={formatMessage({
 										id: "settings.modal.notifications.unlock.title",
 									})}
@@ -458,6 +525,7 @@ const ModalSettings = () => {
 									}
 								/>
 								<SettingsRow
+									icon={icons.shield}
 									title={formatMessage({
 										id: "settings.modal.notifications.security.title",
 									})}
@@ -477,6 +545,7 @@ const ModalSettings = () => {
 									}
 								/>
 								<SettingsRow
+									icon={icons.refresh}
 									title={formatMessage({
 										id: "settings.modal.notifications.updates.title",
 									})}
@@ -501,6 +570,7 @@ const ModalSettings = () => {
 						{activeTab === SettingsTab.Backup && (
 							<>
 								<SettingsRow
+									icon={icons.download_2}
 									title={formatMessage({
 										id: "settings.modal.backup.import.title",
 									})}
@@ -539,6 +609,7 @@ const ModalSettings = () => {
 									}
 								/>
 								<SettingsRow
+									icon={icons.upload}
 									title={formatMessage({
 										id: "settings.modal.backup.export.title",
 									})}
@@ -562,6 +633,7 @@ const ModalSettings = () => {
 
 						{activeTab === SettingsTab.Updates && (
 							<SettingsRow
+								icon={icons.refresh}
 								title={formatMessage({
 									id: "settings.modal.updates.title",
 								})}
@@ -620,10 +692,7 @@ const ModalSettings = () => {
 
 				{/* footer */}
 				<div
-					className={cn("mt-[20px] mx-[15px] border-t", {
-						"border-[#313A4F]": resolved === "dark",
-						"border-black/70": resolved === "light",
-					})}
+					className={cn("mt-[20px] mx-[15px] border-t border-line")}
 				/>
 				<div className="flex items-center justify-between px-[15px] py-[20px]">
 					<ModalButton
@@ -642,7 +711,7 @@ const ModalSettings = () => {
 					/>
 				</div>
 			</div>
-		</div>
+		</UIOverlay>
 	);
 };
 

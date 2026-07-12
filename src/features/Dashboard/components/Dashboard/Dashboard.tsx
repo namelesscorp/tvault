@@ -2,7 +2,7 @@ import { Store as TauriStore } from "@tauri-apps/plugin-store";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { getContainerName } from "../../Dashboard.utils";
 import {
 	cn,
 	devLog,
@@ -11,14 +11,24 @@ import {
 	useRequestGuard,
 } from "utils";
 import { Filters } from "features/Filters";
-import { LocalizationTypes, useLocale } from "features/Localization";
+import {
+	selectFiltersFilterType,
+	selectFiltersSearchValue,
+} from "features/Filters/state/Filters.selectors";
+import { ModalTypes } from "features/Modal/Modal.model";
+import {
+	modalSetIcon,
+	modalSetOpen,
+	modalSetPayload,
+	modalSetTitle,
+	modalSetType,
+} from "features/Modal/state/Modal.actions";
 import { Stats } from "features/Stats";
 import { useAppDispatch } from "features/Store";
-import { useTheme } from "features/Theme";
-import { UIContainerRow, UIImgIcon } from "features/UI";
 import { useContainerInfo, useVault } from "features/Vault/hooks";
 import {
 	vaultRemoveRecent,
+	vaultRemoveRecentContainer,
 	vaultSetContainerInfo,
 } from "features/Vault/state/Vault.actions";
 import { isContainerAccessible } from "features/Vault/state/Vault.actions";
@@ -26,10 +36,11 @@ import {
 	selectVaultContainerInfo,
 	selectVaultContainers,
 	selectVaultRecent,
+	selectVaultResealData,
 } from "features/Vault/state/Vault.selectors";
 import { icons } from "assets/collections/icons";
-import { DashboardContainerInfo } from "../DashboardContainerInfo";
 import { DashboardContainerItem } from "../DashboardContainerItem";
+import { DashboardEmpty } from "../DashboardEmpty";
 
 const Dashboard = () => {
 	const { formatMessage } = useIntl();
@@ -37,37 +48,26 @@ const Dashboard = () => {
 	const recent = useSelector(selectVaultRecent);
 	const dispatch = useAppDispatch();
 	const infoMap = useSelector(selectVaultContainerInfo);
+	const searchValue = useSelector(selectFiltersSearchValue);
+	const filterType = useSelector(selectFiltersFilterType);
 	const {
 		run: fetchInfo,
 		result: infoResult,
 		error: infoError,
 		done: infoDone,
 	} = useContainerInfo();
-	const { locale } = useLocale();
-	const { resolved } = useTheme();
 
 	const { fn: guardedFetchInfo } = useRequestGuard(fetchInfo);
 
-	const navigate = useNavigate();
 	const {
 		handleOpenFolder,
 		handleCloseContainer,
 		handleOpenClosedContainer,
 	} = useVault(containerPath => {
-		setSelectedContainer(prev =>
-			prev && prev.path === containerPath
-				? { path: prev.path, mountDir: "" }
-				: prev,
-		);
-
 		if (containerPath) {
 			guardedFetchInfo(containerPath).catch(() => {});
 		}
 	});
-	const [selectedContainer, setSelectedContainer] = useState<{
-		path: string;
-		mountDir: string;
-	} | null>(null);
 
 	const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
 	const loadedRef = useRef<Set<string>>(new Set());
@@ -79,14 +79,7 @@ const Dashboard = () => {
 		};
 	}, []);
 
-	const selectedResealData = useSelector((state: any) =>
-		selectedContainer
-			? state.vault.resealData.find(
-					(data: any) =>
-						data.containerPath === selectedContainer.path,
-				)
-			: undefined,
-	);
+	const resealData = useSelector(selectVaultResealData);
 
 	const containerEntries = useMemo(
 		() => Object.entries(containers),
@@ -94,7 +87,7 @@ const Dashboard = () => {
 	);
 	const hasContainers = useMemo(
 		() => Object.keys(containers).length > 0 || recent.length > 0,
-		[containers],
+		[containers, recent],
 	);
 
 	const recentClosed = useMemo(() => {
@@ -102,52 +95,60 @@ const Dashboard = () => {
 		return recent.filter(r => !openedSet.has(r.path));
 	}, [recent, containers]);
 
-	const openContainerDetails = useCallback(
-		(idPath: string) => {
-			const id = btoa(idPath);
-			navigate(`/container/${encodeURIComponent(id)}`);
-		},
-		[navigate],
+	/** Opened containers first, then the ones that are known but locked. */
+	const allContainers = useMemo(
+		() => [
+			...containerEntries.map(([path, mountDir]) => ({
+				path,
+				mountDir,
+				isOpened: true,
+			})),
+			...recentClosed.map(r => ({
+				path: r.path,
+				mountDir: "",
+				isOpened: false,
+			})),
+		],
+		[containerEntries, recentClosed],
 	);
 
-	useEffect(() => {
-		if (selectedContainer) return;
-		const firstOpened = containerEntries[0];
-		if (firstOpened) {
-			setSelectedContainer({
-				path: firstOpened[0],
-				mountDir: firstOpened[1],
-			});
-			return;
-		}
-		const firstRecent = recentClosed[0];
-		if (firstRecent) {
-			setSelectedContainer({ path: firstRecent.path, mountDir: "" });
-		}
-	}, [selectedContainer, containerEntries, recentClosed]);
+	const visibleContainers = useMemo(() => {
+		const query = searchValue.trim().toLowerCase();
 
-	useEffect(() => {
-		if (!selectedContainer) return;
-		const currentMount = containers[selectedContainer.path] || "";
-		if (currentMount !== selectedContainer.mountDir) {
-			setSelectedContainer({
-				path: selectedContainer.path,
-				mountDir: currentMount,
-			});
-		}
-	}, [containers, selectedContainer]);
+		return allContainers.filter(item => {
+			if (filterType === "locked" && item.isOpened) return false;
+			if (filterType === "unlocked" && !item.isOpened) return false;
+			if (!query) return true;
 
-	const decorateTitle = useCallback(
-		(path: string) => {
-			const cached = infoMap[path];
-			const isLoading = loadingPaths.has(path);
-			if (isLoading) {
-				return `${path} (${formatMessage({ id: "container.loading" })}...)`;
-			}
-			return cached?.name || path;
+			const info = infoMap[item.path];
+			const haystack = [
+				getContainerName(item.path, info),
+				item.path,
+				...(info?.tags ?? []),
+			]
+				.join(" ")
+				.toLowerCase();
+
+			return haystack.includes(query);
+		});
+	}, [allContainers, filterType, infoMap, searchValue]);
+
+	const openContainerModal = useCallback(
+		(
+			containerPath: string,
+			type: ModalTypes,
+			titleId: string,
+			icon: string,
+		) => {
+			dispatch(modalSetPayload(containerPath));
+			dispatch(modalSetType(type));
+			dispatch(modalSetTitle(formatMessage({ id: titleId })));
+			dispatch(modalSetIcon(icon));
+			dispatch(modalSetOpen(true));
 		},
-		[infoMap, loadingPaths],
+		[dispatch, formatMessage],
 	);
+
 	const candidatePaths = useMemo(() => {
 		const opened = Object.keys(containers);
 		const recentOnly = recentClosed.map(r => r.path);
@@ -233,57 +234,6 @@ const Dashboard = () => {
 	}, [candidatePaths, infoMap, guardedFetchInfo, dispatch]);
 
 	useEffect(() => {
-		if (!selectedContainer?.path) return;
-
-		const path = selectedContainer.path;
-		const hasInfo = infoMap[path]?.name;
-		const isCurrentlyLoading = loadingPaths.has(path);
-		const wasAlreadyTried = loadedRef.current.has(path);
-
-		if (!hasInfo && !isCurrentlyLoading && !wasAlreadyTried) {
-			devLog(
-				"[Dashboard] Auto-loading info for selected container:",
-				path,
-			);
-			setLoadingPaths(prev => new Set(prev).add(path));
-			loadedRef.current.add(path);
-
-			isContainerAccessible(path)
-				.then(isAccessible => {
-					if (!isAccessible) {
-						devLog(
-							"[Dashboard] Selected container not accessible, removing:",
-							path,
-						);
-						dispatch(vaultRemoveRecent(path));
-						return;
-					}
-					return guardedFetchInfo(path);
-				})
-				.catch(error => {
-					loadedRef.current.delete(path);
-					devLog(
-						"[Dashboard] Auto-load failed for:",
-						path,
-						extractErrorMessage(error),
-					);
-					try {
-						if (shouldRemoveContainerOnError(error)) {
-							dispatch(vaultRemoveRecent(path));
-						}
-					} catch {}
-				})
-				.finally(() => {
-					setLoadingPaths(prev => {
-						const newSet = new Set(prev);
-						newSet.delete(path);
-						return newSet;
-					});
-				});
-		}
-	}, [selectedContainer?.path, infoMap, guardedFetchInfo, dispatch]);
-
-	useEffect(() => {
 		if (!infoDone || !infoResult) return;
 		const payload = infoResult as any;
 		if (payload && payload.path && payload.data) {
@@ -314,9 +264,8 @@ const Dashboard = () => {
 		}
 	}, [infoDone, infoResult, infoError, dispatch]);
 
-	console.log(containerEntries);
 	return (
-		<section className="flex flex-col px-[40px]">
+		<section className="flex flex-col h-full min-h-0 px-[40px]">
 			<div className="py-[20px]">
 				<Stats />
 			</div>
@@ -324,158 +273,84 @@ const Dashboard = () => {
 				<Filters />
 			</div>
 			{!hasContainers && (
+				<DashboardEmpty
+					title="dashboard.empty.title"
+					description="dashboard.empty.description"
+				/>
+			)}
+			{visibleContainers.length > 0 && (
+				<div className="grid gap-[20px] grid-cols-3 auto-rows-min flex-1 min-h-0 pt-[15px] pb-[35px] overflow-y-auto scrollbar-hide">
+					{visibleContainers.map(item => (
+						<DashboardContainerItem
+							key={item.path}
+							path={item.path}
+							info={infoMap[item.path]}
+							isOpened={item.isOpened}
+							lastOpenedAt={
+								recent.find(r => r.path === item.path)
+									?.lastOpenedAt
+							}
+							onBrowse={() => handleOpenFolder(item.mountDir)}
+							onLock={() =>
+								handleCloseContainer(
+									item.path,
+									item.mountDir,
+									resealData.find(
+										d => d.containerPath === item.path,
+									),
+								)
+							}
+							onUnlock={() =>
+								handleOpenClosedContainer(item.path)
+							}
+							onEdit={() =>
+								openContainerModal(
+									item.path,
+									ModalTypes.EDIT,
+									"container.edit.title",
+									icons.pencil,
+								)
+							}
+							onInfo={() =>
+								openContainerModal(
+									item.path,
+									ModalTypes.INFO,
+									"container.info.title",
+									icons.book_open,
+								)
+							}
+							onRemove={() =>
+								dispatch(vaultRemoveRecentContainer(item.path))
+							}
+							onDelete={() =>
+								openContainerModal(
+									item.path,
+									ModalTypes.DELETE,
+									"container.delete.title",
+									icons.annotation_alert,
+								)
+							}
+						/>
+					))}
+				</div>
+			)}
+			{hasContainers && visibleContainers.length === 0 && (
+				<DashboardEmpty
+					title="dashboard.notFound"
+					description="dashboard.notFoundDescription"
+				/>
+			)}
+			{loadingPaths.size > 0 && (
 				<div
 					className={cn(
-						"flex flex-col items-center justify-center gap-[10px] m-auto w-[450px] h-[300px] rounded-[10px] border",
-						{
-							"bg-[#ffffff]/3": resolved === "dark",
-							"bg-[#ffffff]/80": resolved === "light",
-							"border-[#313A4F]": resolved === "dark",
-							"border-black/70": resolved === "light",
-							"card-shadow": resolved === "light",
-						},
+						"flex items-center justify-center py-[10px] text-sm text-faint",
 					)}>
-					<div
-						className={cn(
-							"flex items-center justify-center w-[65px] h-[65px] rounded-full",
-							{
-								"bg-[#1D273E]": resolved === "dark",
-								"bg-[#F5F7FF]": resolved === "light",
-							},
-						)}>
-						<UIImgIcon
-							icon={icons.lock}
-							width={30}
-							height={30}
-							color={resolved === "dark" ? "#60A5FA" : "#2463EB"}
-						/>
-					</div>
-					<p
-						className={cn(
-							"text-[24px] font-bold tracking-[-0.05em]",
-							{
-								"text-white": resolved === "dark",
-								"text-black/80": resolved === "light",
-							},
-						)}>
-						{formatMessage({ id: "dashboard.notFound" })}
-					</p>
-					<p
-						className={cn(
-							"text-[16px] font-medium tracking-[-0.05em]",
-							{
-								"text-white/70": resolved === "dark",
-								"text-black/70": resolved === "light",
-							},
-						)}>
-						{formatMessage({ id: "dashboard.notFoundDescription" })}
-					</p>
-				</div>
-			)}
-			{hasContainers && (
-				<div className="grid gap-[20px] grid-cols-3 h-[429px] pt-[15px] pb-[35px] overflow-y-auto scrollbar-hide">
-					{containerEntries.map(([containerPath, mountDir]) => (
-						<DashboardContainerItem
-							path={containerPath}
-							mountDir={mountDir}
-							info={infoMap[containerPath]}
-							isOpened={true}
-							savedMountPath={mountDir}
-							key={containerPath}
-						/>
-					))}
-					{recentClosed.map(r => (
-						<DashboardContainerItem
-							path={r.path}
-							mountDir={""}
-							info={infoMap[r.path]}
-							isOpened={false}
-							savedMountPath={r.lastMountPath}
-							key={r.path}
-						/>
-					))}
-				</div>
-			)}
-			<div
-				className={cn(
-					"grid gap-[20px] items-start",
-					locale === LocalizationTypes.Russian
-						? "grid-cols-[43%_1fr]"
-						: "grid-cols-2",
-				)}>
-				<div className="flex flex-col gap-[12px] col-span-1 max-h-[660px] overflow-y-auto pb-[20px] pr-[1px]">
-					{containerEntries.map(([containerPath, mountDir]) => (
-						<UIContainerRow
-							key={containerPath}
-							text={decorateTitle(containerPath)}
-							active={selectedContainer?.path === containerPath}
-							onDoubleClick={() =>
-								openContainerDetails(containerPath)
-							}
-							onClick={() =>
-								setSelectedContainer({
-									path: containerPath,
-									mountDir,
-								})
-							}
-						/>
-					))}
-					{recentClosed.map(r => (
-						<UIContainerRow
-							key={r.path}
-							text={decorateTitle(r.path)}
-							active={selectedContainer?.path === r.path}
-							onDoubleClick={() => openContainerDetails(r.path)}
-							onClick={() =>
-								setSelectedContainer({
-									path: r.path,
-									mountDir: "",
-								})
-							}
-						/>
-					))}
-					{loadingPaths.size > 0 && (
-						<div className="flex items-center justify-center py-[10px] text-white/50 text-sm">
-							{formatMessage(
-								{ id: "dashboard.loading" },
-								{ count: loadingPaths.size },
-							)}
-						</div>
+					{formatMessage(
+						{ id: "dashboard.loading" },
+						{ count: loadingPaths.size },
 					)}
 				</div>
-				<DashboardContainerInfo
-					path={selectedContainer?.path || ""}
-					mountDir={selectedContainer?.mountDir || ""}
-					isOpened={!!selectedContainer?.mountDir}
-					info={
-						selectedContainer
-							? infoMap[selectedContainer.path]
-							: undefined
-					}
-					savedMountPath={
-						selectedContainer
-							? recent.find(
-									r => r.path === selectedContainer.path,
-								)?.lastMountPath
-							: undefined
-					}
-					onOpenFolder={() =>
-						handleOpenFolder(selectedContainer?.mountDir ?? "")
-					}
-					onClose={updatedResealData =>
-						handleCloseContainer(
-							selectedContainer?.path ?? "",
-							selectedContainer?.mountDir ?? "",
-							updatedResealData || selectedResealData,
-						)
-					}
-					onOpenClosed={() => {
-						const path = selectedContainer?.path;
-						if (!path) return;
-						handleOpenClosedContainer(path);
-					}}
-				/>
-			</div>
+			)}
 		</section>
 	);
 };

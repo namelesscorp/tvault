@@ -1,5 +1,4 @@
 import { ContainerInfoData } from "interfaces";
-import { RouteTypes } from "interfaces";
 
 export type KeySource = "generated" | "manual";
 export type ShareEncoding = "base64" | "hex";
@@ -54,7 +53,6 @@ export interface VaultWizardState {
 	additionalPassword?: string;
 
 	/* last step tracking */
-	lastStep?: RouteTypes;
 
 	/* execution results */
 	encryptCompleted?: boolean;
@@ -93,7 +91,6 @@ export interface VaultOpenWizardState {
 	quickOpen?: boolean;
 
 	/* last step tracking */
-	lastStep?: RouteTypes;
 
 	/* execution results */
 	decryptCompleted?: boolean;
@@ -105,6 +102,8 @@ export interface VaultOpenWizardState {
 
 export interface ResealData {
 	containerPath: string;
+	/** Set when the user moves/renames the container file while editing it. */
+	newContainerPath?: string;
 	mountDir: string;
 	containerInfo: ContainerInfoData;
 	passphrase?: string;

@@ -29,6 +29,11 @@ body {
 	overflow: hidden;
 }
 
+/* macOS draws the window frame itself, so our own rounding would show through. */
+html.native-frame body {
+	border-radius: 0;
+}
+
 #root {
 	height: 100%;
 	background-color: transparent;
@@ -73,6 +78,107 @@ body {
 	--color-secondary-fg: hsl(var(--secondary-fg));
 }
 
+/*
+ * Semantic colours. Every value here is one the components used to hardcode and
+ * branch on with `resolved === "dark"` — so `bg-surface` renders exactly what
+ * `bg-white/3` (dark) and `bg-white/80` (light) rendered before.
+ */
+@layer base {
+	:root.dark {
+		--app: #1d273e;
+		--panel: #1e293b;
+		--surface: rgba(255, 255, 255, 0.03);
+		--surface-hover: #39465f;
+		--elevated: #293449;
+		--badge: #20314d;
+		--line: #313a4f;
+		--field: #313a4f;
+		--field-line: rgba(255, 255, 255, 0.03);
+		--button: #2d384e;
+		--button-line: #6d7482;
+		--track: rgba(255, 255, 255, 0.15);
+		--scrim: rgba(5, 10, 20, 0.6);
+
+		--fg: #ffffff;
+		--fg-strong: #ffffff;
+		--fg-soft: #ffffff;
+		--muted: rgba(255, 255, 255, 0.7);
+		--faint: rgba(255, 255, 255, 0.5);
+
+		--accent: #538dd5;
+		--accent-blue: #2463eb;
+		--accent-green: #16853f;
+		--success: #49de80;
+		--success-alt: #34d399;
+		--danger: #f87171;
+		--hover-tint: rgba(255, 255, 255, 0.05);
+	}
+
+	:root.light {
+		--app: #f5f7ff;
+		--panel: #f5f7ff;
+		--surface: rgba(255, 255, 255, 0.8);
+		--surface-hover: #ffffff;
+		--elevated: #ffffff;
+		--badge: #9ac7ff;
+		--line: rgba(0, 0, 0, 0.7);
+		--field: rgba(255, 255, 255, 0.8);
+		--field-line: rgba(0, 0, 0, 0.7);
+		--button: rgba(255, 255, 255, 0.8);
+		--button-line: rgba(0, 0, 0, 0.7);
+		--track: rgba(0, 0, 0, 0.15);
+		--scrim: rgba(15, 23, 42, 0.45);
+
+		--fg: rgba(0, 0, 0, 0.8);
+		--fg-strong: #000000;
+		--fg-soft: rgba(0, 0, 0, 0.7);
+		--muted: rgba(0, 0, 0, 0.7);
+		--faint: rgba(0, 0, 0, 0.5);
+
+		--accent: #1353a3;
+		--accent-blue: #3a73ed;
+		--accent-green: #2e9253;
+		--success: #2e9253;
+		--success-alt: #2e9253;
+		--danger: #e65757;
+		--hover-tint: rgba(0, 0, 0, 0.05);
+	}
+}
+
+@theme inline {
+	--color-app: var(--app);
+	--color-panel: var(--panel);
+	--color-surface: var(--surface);
+	--color-surface-hover: var(--surface-hover);
+	--color-elevated: var(--elevated);
+	--color-badge: var(--badge);
+	--color-line: var(--line);
+	--color-field: var(--field);
+	--color-field-line: var(--field-line);
+	--color-button: var(--button);
+	--color-button-line: var(--button-line);
+	--color-track: var(--track);
+	--color-scrim: var(--scrim);
+
+	--color-fg: var(--fg);
+	--color-fg-strong: var(--fg-strong);
+	--color-fg-soft: var(--fg-soft);
+	--color-muted: var(--muted);
+	--color-faint: var(--faint);
+
+	--color-accent: var(--accent);
+	--color-accent-blue: var(--accent-blue);
+	--color-accent-green: var(--accent-green);
+	--color-success: var(--success);
+	--color-danger: var(--danger);
+	--color-hover-tint: var(--hover-tint);
+}
+
+/* Light-only elevation: the dark theme separates cards with borders instead. */
 .card-shadow {
 	box-shadow: 0px 5px 5px 2px rgba(0, 0, 0, 0.1);
+}
+
+:root.dark .card-shadow {
+	box-shadow: none;
 }

@@ -18,7 +18,6 @@ import {
 	modalSetType,
 } from "features/Modal/state/Modal.actions";
 import { useAppDispatch } from "features/Store";
-import { useTheme } from "features/Theme";
 import { UIButton, UIImgIcon, UIInput, UIToggle } from "features/UI";
 import { useContainerInfo } from "features/Vault/hooks/useContainerInfo";
 import {
@@ -33,7 +32,6 @@ const GREEN = "#16853F";
 const ModalAdd = () => {
 	const { formatMessage } = useIntl();
 	const { locale } = useLocale();
-	const { resolved } = useTheme();
 	const dispatch = useAppDispatch();
 	const recent = useSelector(selectVaultRecent);
 
@@ -143,7 +141,6 @@ const ModalAdd = () => {
 					integrityProvider,
 					method: tokenType === "share" ? "shamir" : "password",
 					quickOpen: true,
-					lastStep: undefined,
 					decryptCompleted: false,
 					decryptResult: undefined,
 				}),
@@ -172,10 +169,9 @@ const ModalAdd = () => {
 	return (
 		<div>
 			<p
-				className={cn("text-[16px] font-medium tracking-[-0.05em] ", {
-					"text-white/70": resolved === "dark",
-					"text-black/70": resolved === "light",
-				})}>
+				className={cn(
+					"text-[16px] font-medium tracking-[-0.05em]  text-muted",
+				)}>
 				{formatMessage({ id: "modal.add.info.title" })}
 			</p>
 			<div className="flex flex-col gap-[20px] mt-[20px]">
@@ -184,11 +180,7 @@ const ModalAdd = () => {
 					title="modal.add.file.title">
 					<p
 						className={cn(
-							"text-[16px] font-medium tracking-[-0.05em] ",
-							{
-								"text-white/70": resolved === "dark",
-								"text-black/70": resolved === "light",
-							},
+							"text-[16px] font-medium tracking-[-0.05em]  text-muted",
 						)}>
 						{formatMessage({ id: "modal.add.file.description.1" })}{" "}
 						<span className="font-semibold italic">*.tvlt</span>{" "}
@@ -207,11 +199,7 @@ const ModalAdd = () => {
 						<>
 							<p
 								className={cn(
-									"text-[16px] font-medium tracking-[-0.05em] ",
-									{
-										"text-white/70": resolved === "dark",
-										"text-black/70": resolved === "light",
-									},
+									"text-[16px] font-medium tracking-[-0.05em]  text-muted",
 								)}>
 								{formatMessage({
 									id: "modal.add.folder.description",
@@ -228,11 +216,7 @@ const ModalAdd = () => {
 					<div className="flex items-center justify-between gap-[20px]">
 						<p
 							className={cn(
-								"text-[16px] font-medium tracking-[-0.05em]",
-								{
-									"text-white/70": resolved === "dark",
-									"text-black/70": resolved === "light",
-								},
+								"text-[16px] font-medium tracking-[-0.05em] text-muted",
 							)}>
 							{formatMessage({ id: "modal.add.folder.auto" })}
 						</p>
@@ -264,8 +248,7 @@ const ModalAdd = () => {
 					center
 					disabled={busy}
 					style={{
-						backgroundColor:
-							resolved === "dark" ? "#2463EB" : "#3A73ED",
+						backgroundColor: "var(--accent-blue)",
 						color: "#ffffff",
 					}}
 				/>
@@ -284,28 +267,17 @@ const Section = ({
 	children: ReactNode;
 }) => {
 	const { formatMessage } = useIntl();
-	const { resolved } = useTheme();
 
 	return (
 		<div
 			className={cn(
-				"w-full flex flex-col gap-[10px] border rounded-[10px] p-[15px]",
-				{
-					"bg-white/3": resolved === "dark",
-					"bg-white/80": resolved === "light",
-					"border-[#313A4F]": resolved === "dark",
-					"border-black/70": resolved === "light",
-				},
+				"w-full flex flex-col gap-[10px] border rounded-[10px] p-[15px] bg-surface border-line",
 			)}>
 			<div className="flex items-center gap-[10px]">
-				<UIImgIcon icon={icon} width={28} height={28} color="#538DD5" />
+				<UIImgIcon icon={icon} width={29} height={29} color="#538DD5" />
 				<p
 					className={cn(
-						"text-[16px] font-semibold tracking-[-0.05em] ",
-						{
-							"text-white": resolved === "dark",
-							"text-black": resolved === "light",
-						},
+						"text-[16px] font-semibold tracking-[-0.05em]  text-fg-strong",
 					)}>
 					{formatMessage({ id: title })}
 				</p>
@@ -327,15 +299,13 @@ const PathPicker = ({
 	onBrowse: () => void;
 }) => {
 	const { formatMessage } = useIntl();
-	const { resolved } = useTheme();
 
 	return (
 		<div className="flex flex-col gap-[10px] mt-[10px]">
 			<p
-				className={cn("text-[14px] font-semibold tracking-[-0.05em]", {
-					"text-white": resolved === "dark",
-					"text-black": resolved === "light",
-				})}>
+				className={cn(
+					"text-[14px] font-semibold tracking-[-0.05em] text-fg-strong",
+				)}>
 				{formatMessage({ id: label })}
 			</p>
 			<div className="flex items-center gap-[10px]">

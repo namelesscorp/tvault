@@ -1,1 +1,0 @@
-export { VaultShamirMethodStep } from "./VaultShamirMethodStep";

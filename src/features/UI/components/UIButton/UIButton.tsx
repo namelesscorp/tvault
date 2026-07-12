@@ -1,5 +1,4 @@
 import { cn } from "utils";
-import { useTheme } from "features/Theme";
 import { UIImgIcon } from "../UIImgIcon";
 
 const UIButton = ({
@@ -20,38 +19,28 @@ const UIButton = ({
 	color?: string;
 	center?: boolean;
 } & React.HTMLAttributes<HTMLButtonElement>) => {
-	const { resolved } = useTheme();
+	/** Coloured buttons carry their background inline, so lift them with a filter. */
+	const coloured = noTheme || active;
+	const themed = !noTheme && !active;
 
-	const iconColor = noTheme
-		? color
-		: active
-			? "#ffffff"
-			: resolved === "dark"
-				? "#ffffff"
-				: "rgba(0, 0, 0, 0.70)";
+	const iconColor = noTheme ? color : active ? "#ffffff" : "var(--fg-soft)";
 
 	return (
 		<button
+			type="button"
+			disabled={disabled}
 			className={cn(
-				"flex items-center gap-[10px] w-full px-[15px] rounded-[10px] h-[40px] transition-all duration-300 cursor-pointer border whitespace-nowrap",
+				"flex items-center gap-[10px] w-full px-[15px] rounded-[10px] h-[40px] transition-all duration-200 cursor-pointer border whitespace-nowrap",
 				{
 					"justify-center": center,
-					"bg-[#2D384E]": resolved === "dark" && !noTheme,
-					"bg-white/80": resolved === "light" && !noTheme,
-					"bg-[#2463EB]": active,
-					"text-black/70": resolved === "light" && !noTheme,
-					"text-white": (resolved === "dark" && !noTheme) || active,
+					"bg-button text-fg-soft border-button-line":
+						!noTheme && !active,
+					"bg-[#2463EB] text-white border-transparent": active,
+					"border-transparent": noTheme,
 					"cursor-default opacity-50": disabled,
-					"hover:bg-[#2D384E]/80":
-						!disabled && resolved === "dark" && !noTheme && !active,
-					"hover:bg-white/70":
-						!disabled &&
-						resolved === "light" &&
-						!noTheme &&
-						!active,
-					"border-[#6D7482]": resolved === "dark" && !noTheme,
-					"border-black/70": resolved === "light" && !noTheme,
-					"border-transparent": active || noTheme,
+					"hover:bg-surface-hover": !disabled && themed,
+					"hover:brightness-110 active:brightness-95":
+						!disabled && coloured,
 				},
 				props.className,
 			)}

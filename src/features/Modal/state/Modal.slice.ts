@@ -7,4 +7,11 @@ export interface ModalSlice {
 	modalType: ModalTypes;
 	modalTitle: string;
 	modalIcon: string;
+	/** Container path the modal acts on (edit / info / delete). */
+	modalPayload: string;
+	/**
+	 * Set while the CLI is encrypting/decrypting: closing then would leave the
+	 * process running with nothing left to record its result.
+	 */
+	modalBusy: boolean;
 }

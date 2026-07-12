@@ -1,5 +1,7 @@
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useEffect, useState } from "react";
 import { useIntl } from "react-intl";
+import { devError } from "utils";
 import { ModalTypes } from "features/Modal/Modal.model";
 import {
 	modalSetIcon,
@@ -8,7 +10,6 @@ import {
 	modalSetType,
 } from "features/Modal/state/Modal.actions";
 import { useAppDispatch } from "features/Store";
-import { useTheme } from "features/Theme";
 import { UIButton, UIImgIcon } from "features/UI";
 import { icons } from "assets";
 import logo from "assets/images/logo.svg";
@@ -18,13 +19,40 @@ const appWindow = getCurrentWebviewWindow();
 const LayoutHeader = () => {
 	const dispatch = useAppDispatch();
 	const { formatMessage } = useIntl();
-	const { resolved } = useTheme();
+
+	/**
+	 * macOS keeps the native frame (see tauri.macos.conf.json) and draws its own
+	 * traffic lights over the header. Ask the window instead of guessing by
+	 * platform: if the frame is missing for any reason, we still paint controls.
+	 */
+	const [nativeControls, setNativeControls] = useState(false);
+
+	useEffect(() => {
+		appWindow
+			.isDecorated()
+			.then(decorated => {
+				setNativeControls(decorated);
+				/** The OS rounds a decorated window itself — ours would show through. */
+				document.documentElement.classList.toggle(
+					"native-frame",
+					decorated,
+				);
+			})
+			.catch(e => devError("Failed to read window decorations", e));
+	}, []);
 
 	const handleAdd = () => {
 		dispatch(modalSetType(ModalTypes.ADD));
 		dispatch(modalSetOpen(true));
 		dispatch(modalSetTitle(formatMessage({ id: "modal.add" })));
 		dispatch(modalSetIcon(icons.folder_shield));
+	};
+
+	const handleCreate = () => {
+		dispatch(modalSetType(ModalTypes.CREATE));
+		dispatch(modalSetOpen(true));
+		dispatch(modalSetTitle(formatMessage({ id: "modal.create" })));
+		dispatch(modalSetIcon(icons.folder_plus));
 	};
 
 	const handleSettings = () => {
@@ -34,27 +62,31 @@ const LayoutHeader = () => {
 
 	return (
 		<div>
-			<div
-				className="flex items-center justify-end p-[5px]"
-				data-tauri-drag-region>
-				<UIImgIcon
-					icon={icons.minus}
-					color={resolved === "dark" ? "#ffffff" : "#000000"}
-					width={35}
-					height={35}
-					style={{ position: "absolute", top: 8, right: 45 }}
-					pointer
-					onClick={() => appWindow.minimize()}
-				/>
-				<UIImgIcon
-					icon={icons.close}
-					color={resolved === "dark" ? "#ffffff" : "#000000"}
-					width={35}
-					height={35}
-					pointer
-					onClick={() => appWindow.close()}
-				/>
-			</div>
+			{nativeControls ? (
+				<div className="h-[45px]" data-tauri-drag-region />
+			) : (
+				<div
+					className="flex items-center justify-end p-[5px]"
+					data-tauri-drag-region>
+					<UIImgIcon
+						icon={icons.minus}
+						color={"var(--fg-strong)"}
+						width={35}
+						height={35}
+						style={{ position: "absolute", top: 8, right: 45 }}
+						pointer
+						onClick={() => appWindow.minimize()}
+					/>
+					<UIImgIcon
+						icon={icons.close}
+						color={"var(--fg-strong)"}
+						width={35}
+						height={35}
+						pointer
+						onClick={() => appWindow.close()}
+					/>
+				</div>
+			)}
 			<div className="flex items-center justify-between px-[40px]">
 				<div className="flex items-center gap-[20px] pointer-events-none">
 					<img src={logo} alt="logo" />
@@ -81,6 +113,7 @@ const LayoutHeader = () => {
 					<UIButton
 						icon={icons.plus}
 						text={formatMessage({ id: "header.create" })}
+						onClick={handleCreate}
 						style={{
 							background:
 								"linear-gradient(90deg, #2C60EA 0%, #9034EA 100%)",

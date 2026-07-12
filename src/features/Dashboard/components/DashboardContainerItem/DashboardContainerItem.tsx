@@ -1,29 +1,44 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useIntl } from "react-intl";
+import { getContainerName, getSecurityScore } from "../../Dashboard.utils";
 import { ContainerInfoData } from "interfaces";
-import { cn } from "utils";
+import { cn, formatRelativeTime } from "utils";
+import { useLocale } from "features/Localization";
 import { useTheme } from "features/Theme";
 import { UIButton, UIImgIcon } from "features/UI";
-import { useVault } from "features/Vault/hooks/useVault";
 import { icons } from "assets/collections/icons";
 import { DashboardContainerItemTag } from "../DashboardContainerItemTag";
+import { DashboardContainerMenu } from "../DashboardContainerMenu";
 
 const DashboardContainerItem = ({
 	path,
-	mountDir,
 	isOpened,
 	info,
-	savedMountPath,
+	lastOpenedAt,
+	onBrowse,
+	onLock,
+	onUnlock,
+	onEdit,
+	onInfo,
+	onRemove,
+	onDelete,
 }: {
 	path: string;
-	mountDir: string;
 	isOpened: boolean;
 	info?: ContainerInfoData;
-	savedMountPath?: string;
+	lastOpenedAt?: number;
+	onBrowse: () => void;
+	onLock: () => void;
+	onUnlock: () => void;
+	onEdit: () => void;
+	onInfo: () => void;
+	onRemove: () => void;
+	onDelete: () => void;
 }) => {
 	const { resolved } = useTheme();
 	const { formatMessage } = useIntl();
-	const { handleOpenClosedContainer } = useVault();
+	const { locale } = useLocale();
+	const [menuOpen, setMenuOpen] = useState(false);
 
 	const securityTags = useMemo(() => {
 		const tags = [];
@@ -32,7 +47,7 @@ const DashboardContainerItem = ({
 			tags.push({
 				text: "HMAC",
 				bgColor: resolved === "dark" ? "#264B4F" : "#DAF4E0",
-				textColor: resolved === "dark" ? "#34D399" : "#2E9253",
+				textColor: "var(--success-alt)",
 				icon: icons.fingerprint,
 			});
 		}
@@ -50,23 +65,19 @@ const DashboardContainerItem = ({
 			icon: icons.key,
 		});
 
-		const secutiryScore =
-			info?.integrity_provider_type === "hmac" &&
-			info?.token_type === "share"
-				? 100
-				: 15;
+		const secutiryScore = getSecurityScore(info);
 		if (secutiryScore > 50) {
 			tags.push({
 				text: `${secutiryScore}% Security`,
 				bgColor: resolved === "dark" ? "#274A4F" : "#DAF4E0",
-				textColor: resolved === "dark" ? "#49DE80" : "#2E9253",
+				textColor: "var(--success)",
 				icon: icons.shield_2,
 			});
 		} else {
 			tags.push({
 				text: `${secutiryScore}% Security`,
 				bgColor: resolved === "dark" ? "#4A2E3F" : "#FEDBDA",
-				textColor: resolved === "dark" ? "#F87171" : "#E65757",
+				textColor: "var(--danger)",
 				icon: icons.shield_2,
 			});
 		}
@@ -76,32 +87,66 @@ const DashboardContainerItem = ({
 
 	return (
 		<div
-			className={cn("flex flex-col p-[15px] rounded-[10px] border", {
-				"bg-[#ffffff]/3": resolved === "dark",
-				"bg-[#ffffff]/80": resolved === "light",
-				"border-[#313A4F]": resolved === "dark",
-				"border-black/70": resolved === "light",
-				"card-shadow": resolved === "light",
-			})}>
+			className={cn(
+				"flex flex-col p-[15px] rounded-[10px] border bg-surface border-line card-shadow",
+			)}>
 			<div className="flex items-start justify-between">
 				<p
+					title={path}
 					className={cn(
-						"text-[24px] font-bold leading-[26px] tracking-[-0.05em] max-w-[290px] overflow-hidden text-ellipsis whitespace-nowrap",
-						{
-							"text-white": resolved === "dark",
-							"text-black/80": resolved === "light",
-						},
+						"text-[24px] font-bold leading-[26px] tracking-[-0.05em] max-w-[290px] overflow-hidden text-ellipsis whitespace-nowrap text-fg",
 					)}>
-					{info?.name}
+					{getContainerName(path, info)}
 				</p>
-				<UIImgIcon
-					icon={icons.dots_vertical}
-					width={25}
-					height={25}
-					color={
-						resolved === "dark" ? "#ffffff" : "rgba(0, 0, 0, 0.7)"
-					}
-				/>
+				<div className="relative">
+					<UIImgIcon
+						icon={icons.dots_vertical}
+						width={25}
+						height={25}
+						pointer
+						onClick={() => setMenuOpen(prev => !prev)}
+						color={
+							resolved === "dark"
+								? "#ffffff"
+								: "rgba(0, 0, 0, 0.7)"
+						}
+					/>
+					<DashboardContainerMenu
+						open={menuOpen}
+						onClose={() => setMenuOpen(false)}
+						items={[
+							{
+								key: "edit",
+								label: formatMessage({
+									id: "container.menu.edit",
+								}),
+								onClick: onEdit,
+							},
+							{
+								key: "info",
+								label: formatMessage({
+									id: "container.menu.info",
+								}),
+								onClick: onInfo,
+							},
+							{
+								key: "remove",
+								label: formatMessage({
+									id: "container.menu.remove",
+								}),
+								onClick: onRemove,
+							},
+							{
+								key: "delete",
+								label: formatMessage({
+									id: "container.menu.delete",
+								}),
+								danger: true,
+								onClick: onDelete,
+							},
+						]}
+					/>
+				</div>
 			</div>
 			<div className="flex items-center gap-[10px] mt-[44px]">
 				{securityTags.map(tag => (
@@ -110,43 +155,29 @@ const DashboardContainerItem = ({
 			</div>
 			<div
 				className={cn(
-					"flex h-[74px] items-center justify-around rounded-[10px] mt-[20px]",
+					"flex h-[74px] items-center justify-around rounded-[10px] mt-[20px] bg-elevated",
 					{
-						"bg-[#293449]": resolved === "dark",
-						"bg-white": resolved === "light",
 						"border border-black/70": resolved === "light",
 					},
 				)}>
 				<div className="flex flex-col items-center justify-center gap-[5px]">
 					<div className="flex items-center gap-[5px]">
 						<UIImgIcon
-							icon={icons.folder}
+							icon={icons.file}
 							width={20}
 							height={20}
-							color={
-								resolved === "dark"
-									? "rgba(255, 255, 255, 0.7)"
-									: "rgba(0, 0, 0, 0.7)"
-							}
+							color={"var(--muted)"}
 						/>
 						<p
 							className={cn(
-								"text-[16px] font-medium tracking-[-0.05em]",
-								{
-									"text-white/70": resolved === "dark",
-									"text-black/70": resolved === "light",
-								},
+								"text-[16px] font-medium tracking-[-0.05em] text-muted",
 							)}>
 							{formatMessage({ id: "dashboard.info.files" })}
 						</p>
 					</div>
 					<p
 						className={cn(
-							"text-[16px] font-bold tracking-[-0.05em]",
-							{
-								"text-white": resolved === "dark",
-								"text-black/70": resolved === "light",
-							},
+							"text-[16px] font-bold tracking-[-0.05em] text-fg-soft",
 						)}>
 						100
 					</p>
@@ -157,30 +188,18 @@ const DashboardContainerItem = ({
 							icon={icons.database}
 							width={20}
 							height={20}
-							color={
-								resolved === "dark"
-									? "rgba(255, 255, 255, 0.7)"
-									: "rgba(0, 0, 0, 0.7)"
-							}
+							color={"var(--muted)"}
 						/>
 						<p
 							className={cn(
-								"text-[16px] font-medium tracking-[-0.05em]",
-								{
-									"text-white/70": resolved === "dark",
-									"text-black/70": resolved === "light",
-								},
+								"text-[16px] font-medium tracking-[-0.05em] text-muted",
 							)}>
 							{formatMessage({ id: "dashboard.info.size" })}
 						</p>
 					</div>
 					<p
 						className={cn(
-							"text-[16px] font-bold tracking-[-0.05em]",
-							{
-								"text-white": resolved === "dark",
-								"text-black/70": resolved === "light",
-							},
+							"text-[16px] font-bold tracking-[-0.05em] text-fg-soft",
 						)}>
 						2.5 GB
 					</p>
@@ -199,22 +218,21 @@ const DashboardContainerItem = ({
 			{isOpened && (
 				<div className="grid grid-cols-2 gap-[10px] mt-[29px]">
 					<UIButton
-						icon={icons.unlock}
+						icon={icons.eye}
 						text={formatMessage({ id: "dashboard.info.browse" })}
 						center
 						noTheme
 						style={{
-							backgroundColor:
-								resolved === "dark" ? "#16853F" : "#2E9253",
+							backgroundColor: "var(--accent-green)",
 							color: "#ffffff",
 						}}
-						onClick={() => {}}
+						onClick={onBrowse}
 					/>
 					<UIButton
 						icon={icons.lock}
 						text={formatMessage({ id: "dashboard.info.lock" })}
 						center
-						onClick={() => {}}
+						onClick={onLock}
 					/>
 				</div>
 			)}
@@ -226,11 +244,10 @@ const DashboardContainerItem = ({
 						center
 						noTheme
 						style={{
-							backgroundColor:
-								resolved === "dark" ? "#2463EB" : "#3A73ED",
+							backgroundColor: "var(--accent-blue)",
 							color: "#ffffff",
 						}}
-						onClick={() => handleOpenClosedContainer(path)}
+						onClick={onUnlock}
 					/>
 				</div>
 			)}
@@ -240,26 +257,19 @@ const DashboardContainerItem = ({
 					"bg-black/20": resolved === "light",
 				})}
 			/>
-			<div className="flex justify-center gap-[5px] pt-[26px] pb-[9px]">
+			<div className="flex justify-center gap-[5px] pt-[26px] pb-[4px]">
 				<UIImgIcon
 					icon={icons.calendar}
 					width={20}
 					height={20}
-					color={
-						resolved === "dark"
-							? "rgba(255, 255, 255, 0.7)"
-							: "rgba(0, 0, 0, 0.7)"
-					}
+					color={"var(--muted)"}
 				/>
 				<p
 					className={cn(
-						"text-[16px] font-medium tracking-[-0.05em]",
-						{
-							"text-white/70": resolved === "dark",
-							"text-black/70": resolved === "light",
-						},
+						"text-[16px] font-medium tracking-[-0.05em] text-muted",
 					)}>
-					{formatMessage({ id: "dashboard.info.lastAccessed" })}
+					{formatMessage({ id: "dashboard.info.lastAccessed" })}{" "}
+					{formatRelativeTime(lastOpenedAt, locale)}
 				</p>
 			</div>
 		</div>

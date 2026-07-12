@@ -55,10 +55,16 @@ export const useVault = (
 			try {
 				if (resealData) {
 					const containerInfo = infoMap[containerPath];
+					/** An empty object would silently strip name/comment/tags on reseal. */
+					const hasInfo =
+						!!resealData.containerInfo &&
+						Object.keys(resealData.containerInfo).length > 0;
 					const completeResealData: ResealData = {
 						...resealData,
-						containerInfo:
-							resealData.containerInfo || containerInfo || {},
+						containerInfo: hasInfo
+							? resealData.containerInfo
+							: (containerInfo ??
+								({} as ResealData["containerInfo"])),
 					};
 
 					devLog(
@@ -102,7 +108,9 @@ export const useVault = (
 					try {
 						const resealArgs: any = {
 							currentPath: completeResealData.containerPath,
-							newPath: completeResealData.containerPath,
+							newPath:
+								completeResealData.newContainerPath ||
+								completeResealData.containerPath,
 							folderPath: completeResealData.mountDir,
 						};
 
