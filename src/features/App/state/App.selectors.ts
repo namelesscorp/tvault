@@ -18,3 +18,13 @@ export const selectAppLocale = createSelector(
 	selectAppSlice,
 	slice => slice.locale,
 );
+
+export const selectAppAnimations = createSelector(
+	selectAppSlice,
+	slice => slice.animations,
+);
+
+export const selectAppAutoUpdate = createSelector(
+	selectAppSlice,
+	slice => slice.autoUpdate,
+);

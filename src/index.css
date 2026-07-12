@@ -110,7 +110,11 @@ html.native-frame body {
 		--accent-green: #16853f;
 		--success: #49de80;
 		--success-alt: #34d399;
+		--warning: #fbbf24;
 		--danger: #f87171;
+		--tint-success: #274a4f;
+		--tint-warning: #4a3c2a;
+		--tint-danger: #4a2e3f;
 		--hover-tint: rgba(255, 255, 255, 0.05);
 	}
 
@@ -140,7 +144,11 @@ html.native-frame body {
 		--accent-green: #2e9253;
 		--success: #2e9253;
 		--success-alt: #2e9253;
+		--warning: #a16207;
 		--danger: #e65757;
+		--tint-success: #daf4e0;
+		--tint-warning: #fceccb;
+		--tint-danger: #fedbda;
 		--hover-tint: rgba(0, 0, 0, 0.05);
 	}
 }
@@ -170,6 +178,7 @@ html.native-frame body {
 	--color-accent-blue: var(--accent-blue);
 	--color-accent-green: var(--accent-green);
 	--color-success: var(--success);
+	--color-warning: var(--warning);
 	--color-danger: var(--danger);
 	--color-hover-tint: var(--hover-tint);
 }
@@ -181,4 +190,102 @@ html.native-frame body {
 
 :root.dark .card-shadow {
 	box-shadow: none;
+}
+
+/* Cards and tiles rise a little towards the cursor. */
+.hover-lift {
+	transition:
+		transform 200ms ease-out,
+		box-shadow 200ms ease-out;
+}
+
+.hover-lift:hover {
+	transform: translateY(-2px);
+}
+
+/* Buttons give way under the press. */
+.press:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+/* The badge inside a hovered card swells a touch. */
+.icon-pop {
+	transition: transform 200ms ease-out;
+}
+
+.group:hover .icon-pop {
+	transform: scale(1.06);
+}
+
+/* Cards fade up as they arrive; Dashboard staggers them with a delay. */
+@keyframes enter-up {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/*
+ * `backwards`, not `both`: an animation that keeps filling forwards would pin
+ * `transform` for good and the hover lift above could never move the card.
+ */
+.animate-enter-up {
+	animation: enter-up 350ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes float-soft {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-6px);
+	}
+}
+
+.animate-float {
+	animation: float-soft 3s ease-in-out infinite;
+}
+
+/* A highlight sweeping the progress bar, so it reads as alive even while stuck. */
+@keyframes shimmer {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(300%);
+	}
+}
+
+.animate-shimmer {
+	animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/*
+ * Settings › Interface › Animations. Every bit of motion in the app is a CSS
+ * transition or a keyframe animation, so one class on <html> switches all of it
+ * off at once — no component needs to know about the setting.
+ *
+ * The spinner is the deliberate exception: it reports that work is running, and
+ * a frozen spinner reads as a hung app rather than as a calm one. Transform-based
+ * hovers are pinned separately, otherwise "no motion" would just make them snap.
+ */
+html.no-motion *:not(.animate-spin),
+html.no-motion *:not(.animate-spin)::before,
+html.no-motion *:not(.animate-spin)::after {
+	transition-duration: 1ms !important;
+	transition-delay: 0ms !important;
+	animation-duration: 1ms !important;
+	animation-delay: 0ms !important;
+	animation-iteration-count: 1 !important;
+}
+
+html.no-motion .hover-lift:hover,
+html.no-motion .press:active:not(:disabled),
+html.no-motion .group:hover .icon-pop {
+	transform: none;
 }

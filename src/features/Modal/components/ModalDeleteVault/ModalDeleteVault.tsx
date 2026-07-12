@@ -100,7 +100,7 @@ const ModalDeleteVault = () => {
 			{isOpened && (
 				<p
 					className={cn(
-						"text-[14px] font-medium tracking-[-0.05em] text-muted",
+						"text-[14px] font-medium tracking-[-0.05em] min-w-0 [overflow-wrap:anywhere] text-muted",
 					)}>
 					{formatMessage({ id: "container.delete.hint.opened" })}
 				</p>
@@ -109,7 +109,7 @@ const ModalDeleteVault = () => {
 			<div className="flex flex-col gap-[10px]">
 				<p
 					className={cn(
-						"text-[14px] font-semibold tracking-[-0.05em] text-fg",
+						"text-[14px] font-semibold tracking-[-0.05em] min-w-0 [overflow-wrap:anywhere] text-fg",
 					)}>
 					{formatMessage(
 						{ id: "container.delete.confirm.label" },
@@ -123,7 +123,7 @@ const ModalDeleteVault = () => {
 				/>
 				<p
 					className={cn(
-						"text-[14px] font-medium tracking-[-0.05em] text-muted",
+						"text-[14px] font-medium tracking-[-0.05em] min-w-0 [overflow-wrap:anywhere] text-muted",
 					)}>
 					{path}
 				</p>

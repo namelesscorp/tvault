@@ -18,9 +18,9 @@ const DashboardEmpty = ({
 	const { resolved } = useTheme();
 
 	return (
-		<div className="flex justify-center pt-[15px]">
-			<div className="flex flex-col items-center justify-center gap-[10px] w-[450px] h-[300px] rounded-[10px] border bg-surface border-line card-shadow">
-				<div className="flex items-center justify-center w-[65px] h-[65px] rounded-full bg-app">
+		<div className="flex justify-center pt-[10px]">
+			<div className="flex flex-col items-center justify-center gap-[10px] w-[450px] h-[300px] rounded-[10px] border bg-surface border-line card-shadow animate-enter-up">
+				<div className="flex items-center justify-center w-[65px] h-[65px] rounded-full bg-app animate-float">
 					<UIImgIcon
 						icon={icons.lock}
 						width={30}

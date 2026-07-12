@@ -27,7 +27,6 @@ import { Stats } from "features/Stats";
 import { useAppDispatch } from "features/Store";
 import { useContainerInfo, useVault } from "features/Vault/hooks";
 import {
-	vaultRemoveRecent,
 	vaultRemoveRecentContainer,
 	vaultSetContainerInfo,
 } from "features/Vault/state/Vault.actions";
@@ -63,6 +62,8 @@ const Dashboard = () => {
 		handleOpenFolder,
 		handleCloseContainer,
 		handleOpenClosedContainer,
+		closingPath,
+		closingProgress,
 	} = useVault(containerPath => {
 		if (containerPath) {
 			guardedFetchInfo(containerPath).catch(() => {});
@@ -205,7 +206,7 @@ const Dashboard = () => {
 						"[Dashboard] Container not accessible, removing:",
 						nextPath,
 					);
-					dispatch(vaultRemoveRecent(nextPath));
+					dispatch(vaultRemoveRecentContainer(nextPath));
 					return;
 				}
 
@@ -218,7 +219,7 @@ const Dashboard = () => {
 						extractErrorMessage(error),
 					);
 					if (shouldRemoveContainerOnError(error)) {
-						dispatch(vaultRemoveRecent(nextPath));
+						dispatch(vaultRemoveRecentContainer(nextPath));
 					}
 				} catch {}
 			} finally {
@@ -258,7 +259,7 @@ const Dashboard = () => {
 						? String((infoError as any).path)
 						: undefined;
 				if (shouldRemoveContainerOnError(infoError) && pathFromErr) {
-					dispatch(vaultRemoveRecent(pathFromErr));
+					dispatch(vaultRemoveRecentContainer(pathFromErr));
 				}
 			} catch {}
 		}
@@ -269,7 +270,7 @@ const Dashboard = () => {
 			<div className="py-[20px]">
 				<Stats />
 			</div>
-			<div className="py-[20px]">
+			<div className="pb-[10px]">
 				<Filters />
 			</div>
 			{!hasContainers && (
@@ -279,17 +280,20 @@ const Dashboard = () => {
 				/>
 			)}
 			{visibleContainers.length > 0 && (
-				<div className="grid gap-[20px] grid-cols-3 auto-rows-min flex-1 min-h-0 pt-[15px] pb-[35px] overflow-y-auto scrollbar-hide">
-					{visibleContainers.map(item => (
+				<div className="grid gap-[20px] grid-cols-3 auto-rows-min flex-1 min-h-0 pt-[10px] pb-[35px] overflow-y-auto scrollbar-hide">
+					{visibleContainers.map((item, index) => (
 						<DashboardContainerItem
 							key={item.path}
 							path={item.path}
+							index={index}
 							info={infoMap[item.path]}
 							isOpened={item.isOpened}
 							lastOpenedAt={
 								recent.find(r => r.path === item.path)
 									?.lastOpenedAt
 							}
+							closing={closingPath === item.path}
+							closingProgress={closingProgress}
 							onBrowse={() => handleOpenFolder(item.mountDir)}
 							onLock={() =>
 								handleCloseContainer(

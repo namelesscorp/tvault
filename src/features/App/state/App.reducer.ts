@@ -6,6 +6,8 @@ const initialState: AppSlice = {
 	inited: false,
 	loaded: false,
 	locale: DEFAULT_LOCALE,
+	animations: true,
+	autoUpdate: false,
 };
 
 export const appSlice = createSlice({
@@ -23,6 +25,12 @@ export const appSlice = createSlice({
 			{ payload }: PayloadAction<AppSlice["locale"]>,
 		) => {
 			state.locale = payload;
+		},
+		appSetAnimations: (state, { payload }: PayloadAction<boolean>) => {
+			state.animations = payload;
+		},
+		appSetAutoUpdate: (state, { payload }: PayloadAction<boolean>) => {
+			state.autoUpdate = payload;
 		},
 	},
 });

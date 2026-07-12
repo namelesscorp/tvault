@@ -1,6 +1,7 @@
 import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
-import { cn, formatLocalDateTime } from "utils";
+import { getSecurityScore } from "features/Dashboard/Dashboard.utils";
+import { cn, formatBytes, formatLocalDateTime } from "utils";
 import { selectModalPayload } from "features/Modal/state/Modal.selectors";
 import {
 	selectVaultContainerInfo,
@@ -16,6 +17,7 @@ const ModalVaultInfo = () => {
 
 	const info = infoMap[path];
 	const mountDir = containers[path];
+	const securityScore = getSecurityScore(info);
 
 	const rows: [string, string][] = [
 		[formatMessage({ id: "container.name" }), info?.name || "—"],
@@ -44,6 +46,24 @@ const ModalVaultInfo = () => {
 		[
 			formatMessage({ id: "container.compression" }),
 			info?.compression_type || "—",
+		],
+		[
+			formatMessage({ id: "container.files" }),
+			info?.file_count !== undefined
+				? info.file_count.toLocaleString()
+				: "—",
+		],
+		[
+			formatMessage({ id: "container.size" }),
+			formatBytes(info?.compressed_size),
+		],
+		[
+			formatMessage({ id: "container.sizeOriginal" }),
+			formatBytes(info?.uncompressed_size),
+		],
+		[
+			formatMessage({ id: "container.security" }),
+			securityScore === null ? "—" : `${securityScore}%`,
 		],
 		[formatMessage({ id: "container.containerPath" }), path || "—"],
 		[
@@ -78,7 +98,7 @@ const ModalVaultInfo = () => {
 					</p>
 					<p
 						className={cn(
-							"text-[14px] font-medium tracking-[-0.05em] text-right break-all text-fg",
+							"text-[14px] font-medium tracking-[-0.05em] text-right min-w-0 [overflow-wrap:anywhere] text-fg",
 						)}>
 						{value}
 					</p>

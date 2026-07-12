@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { tempDir } from "@tauri-apps/api/path";
 import { BaseDirectory, remove } from "@tauri-apps/plugin-fs";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
@@ -34,9 +34,12 @@ export const useVault = (
 	const dispatch = useAppDispatch();
 	const infoMap = useSelector(selectVaultContainerInfo);
 	const recent = useSelector(selectVaultRecent);
-	const { run: runReseal } = useReseal();
+	const { run: runReseal, progress: resealProgress } = useReseal();
 	const { run: runContainerInfo } = useContainerInfo();
 	const { formatMessage } = useIntl();
+
+	/** Which container is being repacked right now — the card shows a spinner. */
+	const [closingPath, setClosingPath] = useState<string | null>(null);
 
 	const handleOpenFolder = useCallback(async (mountDir: string) => {
 		try {
@@ -52,6 +55,7 @@ export const useVault = (
 			mountDir: string,
 			resealData?: ResealData,
 		) => {
+			setClosingPath(containerPath);
 			try {
 				if (resealData) {
 					const containerInfo = infoMap[containerPath];
@@ -263,6 +267,8 @@ export const useVault = (
 			} catch (err) {
 				devError("Failed to close container", err);
 				toast.error(formatMessage({ id: "container.close.error" }));
+			} finally {
+				setClosingPath(null);
 			}
 		},
 		[dispatch, onContainerClose, runReseal, infoMap],
@@ -303,5 +309,7 @@ export const useVault = (
 		handleOpenFolder,
 		handleCloseContainer,
 		handleOpenClosedContainer,
+		closingPath,
+		closingProgress: resealProgress,
 	};
 };

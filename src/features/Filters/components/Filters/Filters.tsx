@@ -21,7 +21,7 @@ const Filters = () => {
 	const dispatch = useAppDispatch();
 
 	return (
-		<div className="flex items-center gap-[20px]">
+		<div className="flex items-center gap-[10px]">
 			<div
 				className={cn(
 					"flex items-center flex-1 gap-[15px] h-[40px] rounded-[10px] px-[15px] border bg-surface border-line",
@@ -39,6 +39,9 @@ const Filters = () => {
 						dispatch(filtersSetSearchValue(e.target.value))
 					}
 					placeholder={formatMessage({ id: "filters.search" })}
+					autoCapitalize="off"
+					autoCorrect="off"
+					spellCheck={false}
 					className={cn(
 						"flex-1 bg-transparent outline-none text-[16px] font-medium text-fg-strong placeholder:text-muted",
 					)}

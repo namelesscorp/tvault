@@ -15,14 +15,20 @@ import { useLocale } from "features/Localization";
 import { modalSetBusy, modalSetOpen } from "features/Modal/state/Modal.actions";
 import { useAppDispatch } from "features/Store";
 import { useTheme } from "features/Theme";
-import { UIButton, UIImgIcon, UIInput, UIPasswordField } from "features/UI";
+import {
+	UIButton,
+	UIImgIcon,
+	UIInput,
+	UIPasswordField,
+	UIProgress,
+} from "features/UI";
 import { ResealData } from "features/Vault/Vault.model";
 import { useDecrypt } from "features/Vault/hooks/useDecrypt";
 import {
 	vaultAddContainer,
-	vaultAddRecentWithMountPath,
 	vaultAddResealData,
 	vaultSetOpenWizardState,
+	vaultTrackRecentContainer,
 } from "features/Vault/state/Vault.actions";
 import {
 	selectVaultContainerInfo,
@@ -102,7 +108,7 @@ const ModalOpen = () => {
 	const infoMap = useSelector(selectVaultContainerInfo);
 	const dispatch = useAppDispatch();
 
-	const { done, error, failed, busy, run } = useDecrypt();
+	const { progress, done, error, failed, busy, run } = useDecrypt();
 
 	const [shares, setShares] = useState<string[]>(
 		openWizardState.shares && openWizardState.shares.length >= MIN_SHARES
@@ -254,18 +260,27 @@ const ModalOpen = () => {
 				return;
 			}
 
-			const tokenFlag = isPassword
-				? password
-				: isMaster
-					? masterToken
-					: readyShares.join("|");
+			/**
+			 * A password-only container derives its key from the passphrase, so the
+			 * core needs `-passphrase` as well as the token flag — the flag alone
+			 * fails with "message authentication failed".
+			 */
+			if (isPassword) {
+				await run({
+					containerPath,
+					folderPath,
+					passphrase: password,
+					additionalPassword,
+				});
+				return;
+			}
 
 			await run({
 				containerPath,
 				folderPath,
 				tokenReaderType: "flag",
 				tokenFormat: "plaintext",
-				tokenFlag,
+				tokenFlag: isMaster ? masterToken : readyShares.join("|"),
 				additionalPassword,
 			});
 		} catch (err) {
@@ -325,7 +340,7 @@ const ModalOpen = () => {
 			}),
 		);
 		dispatch(
-			vaultAddRecentWithMountPath({
+			vaultTrackRecentContainer({
 				path: containerPath,
 				mountPath: usedFolderPath,
 			}),
@@ -443,8 +458,7 @@ const ModalOpen = () => {
 				</div>
 				<div className="flex flex-col gap-[20px] mt-[20px]">
 					{isPassword && (
-						<UIInput
-							type="text"
+						<UIPasswordField
 							placeholder={formatMessage({
 								id: "modal.open.placeholder.none",
 							})}
@@ -514,18 +528,24 @@ const ModalOpen = () => {
 				)}
 				<div className="flex flex-col gap-[20px] mt-[20px]">
 					<UIButton
-						text={formatMessage({ id: "common.unlock" })}
+						text={
+							busy
+								? `${progress}%`
+								: formatMessage({ id: "common.unlock" })
+						}
 						icon={icons.unlock}
 						color="#ffffff"
 						noTheme
 						center
 						onClick={handleOpen}
-						disabled={!canUnlock || busy}
+						disabled={!canUnlock}
+						loading={busy}
 						style={{
 							backgroundColor: "var(--accent-blue)",
 							color: "#ffffff",
 						}}
 					/>
+					{busy && <UIProgress value={progress} />}
 					<p
 						className={cn(
 							"text-[16px] font-medium tracking-[-0.05em] text-center text-muted",

@@ -1,12 +1,13 @@
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useRef, useState } from "react";
 import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { cn } from "utils";
+import { useAnimations, useAutoUpdate } from "features/App";
 import { appChangeLocale } from "features/App/state/App.actions";
 import { selectAppLocale } from "features/App/state/App.selectors";
 import { LocalizationTypes } from "features/Localization/Localization.model";
-import { useUpdater } from "features/Settings/hooks";
+import { useSettingsBackup, useUpdater } from "features/Settings/hooks";
 import { useAppDispatch } from "features/Store";
 import { useTheme } from "features/Theme";
 import { UIImgIcon, UIOverlay, UIToggle } from "features/UI";
@@ -19,6 +20,7 @@ import { icons } from "assets";
 import { modalSetOpen } from "../../state/Modal.actions";
 
 enum SettingsTab {
+	General = "general",
 	Interface = "interface",
 	Notifications = "notifications",
 	Backup = "backup",
@@ -30,6 +32,9 @@ interface NotificationsState {
 	security: boolean;
 	updates: boolean;
 }
+
+/** Softens the bottom edge of a scrollable list — see the containers folders. */
+const FADE = "linear-gradient(to bottom, #000 82%, transparent 100%)";
 
 const DEFAULT_NOTIFICATIONS: NotificationsState = {
 	unlock: true,
@@ -50,6 +55,11 @@ const ModalButton = ({
 	onClick?: () => void;
 	disabled?: boolean;
 	variant?: "blue" | "green" | "neutral";
+	/**
+	 * A floor, not a fixed size: the buttons line up at the same width in English,
+	 * but a longer translation ("Проверить обновления") grows the button instead of
+	 * spilling its label out of it.
+	 */
 	width: number;
 }) => {
 	const { resolved } = useTheme();
@@ -72,9 +82,9 @@ const ModalButton = ({
 			type="button"
 			onClick={onClick}
 			disabled={disabled}
-			style={{ width: `${width}px`, backgroundColor: bg }}
+			style={{ minWidth: `${width}px`, backgroundColor: bg }}
 			className={cn(
-				"flex items-center justify-center gap-[10px] h-[40px] rounded-[10px] border text-[16px] font-medium tracking-[-0.05em] whitespace-nowrap transition-all duration-200 cursor-pointer",
+				"flex items-center justify-center gap-[10px] shrink-0 h-[40px] px-[15px] rounded-[10px] border text-[16px] font-medium tracking-[-0.05em] whitespace-nowrap transition-all duration-200 cursor-pointer press",
 				{
 					"bg-white/3 border-[#313A4F]":
 						neutral && resolved === "dark",
@@ -89,7 +99,13 @@ const ModalButton = ({
 					"hover:brightness-110": !disabled && !neutral,
 				},
 			)}>
-			<UIImgIcon icon={icon} width={20} height={20} color={textColor} />
+			<UIImgIcon
+				icon={icon}
+				width={20}
+				height={20}
+				color={textColor}
+				style={{ flexShrink: 0 }}
+			/>
 			<span style={{ color: textColor }}>{text}</span>
 		</button>
 	);
@@ -232,16 +248,24 @@ const ModalSettings = ({
 }) => {
 	const { formatMessage } = useIntl();
 	const { resolved, setPreference } = useTheme();
+	const { enabled: animations, setEnabled: setAnimations } = useAnimations();
+	const { enabled: autoUpdate, setEnabled: setAutoUpdate } = useAutoUpdate();
 	const dispatch = useAppDispatch();
 	const containersPaths = useSelector(selectVaultContainersPaths);
 
 	const [activeTab, setActiveTab] = useState<SettingsTab>(
-		SettingsTab.Interface,
+		SettingsTab.General,
 	);
 	const [notifications, setNotifications] = useState<NotificationsState>(
 		DEFAULT_NOTIFICATIONS,
 	);
-	const [importPath, setImportPath] = useState("");
+
+	const {
+		importPath,
+		busy: backupBusy,
+		exportSettings,
+		importSettings,
+	} = useSettingsBackup();
 
 	const {
 		isChecking,
@@ -263,11 +287,6 @@ const ModalSettings = ({
 	const handleClose = () =>
 		onClose ? onClose() : dispatch(modalSetOpen(false));
 
-	const handleReset = () => {
-		setNotifications(DEFAULT_NOTIFICATIONS);
-		setImportPath("");
-	};
-
 	/** Folders scanned in the background for containers (see useBackgroundContainerScan). */
 	const handleAddContainersPath = async () => {
 		const dir = await open({ directory: true, multiple: false });
@@ -276,23 +295,8 @@ const ModalSettings = ({
 		}
 	};
 
-	const handleImport = async () => {
-		const file = await open({
-			multiple: false,
-			filters: [{ name: "Settings", extensions: ["tvlt"] }],
-		});
-		if (typeof file === "string") {
-			setImportPath(file);
-		}
-	};
-
-	const handleExport = async () => {
-		await save({
-			filters: [{ name: "Settings", extensions: ["tvlt"] }],
-		});
-	};
-
 	const tabs = [
+		{ key: SettingsTab.General, label: "settings.modal.tabs.general" },
 		{ key: SettingsTab.Interface, label: "settings.modal.tabs.interface" },
 		{
 			key: SettingsTab.Notifications,
@@ -394,58 +398,58 @@ const ModalSettings = ({
 
 				{/* body card */}
 				<div className="px-[15px] pt-[20px]">
-					<div
-						className={cn(
-							"min-h-[330px] px-[15px] py-[15px] rounded-[10px] border",
-							{
-								"bg-white/3 border-[#313A4F]":
-									resolved === "dark",
-								"bg-white/80 border-black/70":
-									resolved === "light",
-							},
-						)}>
-						{activeTab === SettingsTab.Interface && (
-							<>
-								<SettingsRow
-									icon={icons.folder}
-									title={formatMessage({
-										id: "settings.containersPath",
-									})}
-									description={formatMessage({
-										id: "settings.modal.containersPath.description",
-									})}
-									control={
-										<ModalButton
-											icon={icons.folder}
-											text={formatMessage({
-												id: "settings.addFolder",
-											})}
-											onClick={handleAddContainersPath}
-											variant="green"
-											width={200}
-										/>
-									}
-									below={
-										containersPaths.length > 0 && (
-											<div className="flex flex-col gap-[10px] pt-[15px]">
+					<div className="h-[330px] overflow-y-auto px-[15px] py-[15px] rounded-[10px] border bg-surface border-line">
+						{activeTab === SettingsTab.General && (
+							<SettingsRow
+								icon={icons.folder}
+								title={formatMessage({
+									id: "settings.containersPath",
+								})}
+								description={formatMessage({
+									id: "settings.modal.containersPath.description",
+								})}
+								control={
+									<ModalButton
+										icon={icons.folder}
+										text={formatMessage({
+											id: "settings.addFolder",
+										})}
+										onClick={handleAddContainersPath}
+										variant="green"
+										width={200}
+									/>
+								}
+								below={
+									<div className="pt-[15px]">
+										{containersPaths.length === 0 ? (
+											<p className="py-[20px] text-center text-[14px] font-medium tracking-[-0.05em] text-muted">
+												{formatMessage({
+													id: "settings.modal.containersPath.empty",
+												})}
+											</p>
+										) : (
+											/** Fixed height, so adding folders never resizes the modal. */
+											<div
+												className="h-[220px] overflow-y-auto flex flex-col gap-[10px] pr-[2px]"
+												style={
+													/** Scrollbars are hidden app-wide, so fade the cut row instead. */
+													containersPaths.length > 4
+														? {
+																maskImage: FADE,
+																WebkitMaskImage:
+																	FADE,
+															}
+														: undefined
+												}>
 												{containersPaths.map(path => (
 													<div
 														key={path}
-														className="flex items-center gap-[10px]">
+														className="flex items-center gap-[10px] shrink-0">
 														<input
 															value={path}
 															readOnly
-															className={cn(
-																"flex-1 h-[40px] px-[14px] rounded-[10px] border text-[16px] font-medium tracking-[-0.05em] outline-none",
-																{
-																	"bg-white/3 border-[#313A4F] text-white":
-																		resolved ===
-																		"dark",
-																	"bg-white/80 border-black/70 text-black":
-																		resolved ===
-																		"light",
-																},
-															)}
+															title={path}
+															className="flex-1 min-w-0 h-[40px] px-[14px] rounded-[10px] border text-[16px] font-medium tracking-[-0.05em] outline-none bg-field border-field-line text-fg-strong"
 														/>
 														<ModalButton
 															icon={icons.minus}
@@ -467,9 +471,14 @@ const ModalSettings = ({
 													</div>
 												))}
 											</div>
-										)
-									}
-								/>
+										)}
+									</div>
+								}
+							/>
+						)}
+
+						{activeTab === SettingsTab.Interface && (
+							<>
 								<SettingsRow
 									icon={icons.moon}
 									title={formatMessage({
@@ -498,6 +507,21 @@ const ModalSettings = ({
 										id: "settings.modal.language.description",
 									})}
 									control={<LanguageSelect />}
+								/>
+								<SettingsRow
+									icon={icons.refresh}
+									title={formatMessage({
+										id: "settings.modal.animations.title",
+									})}
+									description={formatMessage({
+										id: "settings.modal.animations.description",
+									})}
+									control={
+										<UIToggle
+											checked={animations}
+											onChange={setAnimations}
+										/>
+									}
 								/>
 							</>
 						)}
@@ -582,11 +606,12 @@ const ModalSettings = ({
 											<input
 												value={importPath}
 												readOnly
+												title={importPath}
 												placeholder={formatMessage({
 													id: "settings.modal.backup.import.placeholder",
 												})}
 												className={cn(
-													"w-[275px] h-[40px] px-[14px] rounded-[10px] border text-[16px] font-medium tracking-[-0.05em] outline-none",
+													"w-[275px] h-[40px] px-[14px] rounded-[10px] border text-[16px] font-medium tracking-[-0.05em] outline-none text-ellipsis",
 													{
 														"bg-white/3 border-[#313A4F] text-white placeholder:text-white/70":
 															resolved === "dark",
@@ -601,7 +626,8 @@ const ModalSettings = ({
 												text={formatMessage({
 													id: "common.browse",
 												})}
-												onClick={handleImport}
+												onClick={importSettings}
+												disabled={backupBusy}
 												variant="green"
 												width={121}
 											/>
@@ -622,7 +648,8 @@ const ModalSettings = ({
 											text={formatMessage({
 												id: "common.export",
 											})}
-											onClick={handleExport}
+											onClick={exportSettings}
+											disabled={backupBusy}
 											variant="blue"
 											width={121}
 										/>
@@ -632,60 +659,78 @@ const ModalSettings = ({
 						)}
 
 						{activeTab === SettingsTab.Updates && (
-							<SettingsRow
-								icon={icons.refresh}
-								title={formatMessage({
-									id: "settings.modal.updates.title",
-								})}
-								description={formatMessage(
-									{
-										id: "settings.modal.updates.description",
-									},
-									{ version: currentVersion },
-								)}
-								control={
-									!updateAvailable ? (
-										<ModalButton
-											icon={icons.refresh}
-											text={formatMessage({
-												id: "settings.checkUpdates",
-											})}
-											onClick={checkForUpdates}
-											disabled={
-												isChecking ||
-												isDownloading ||
-												isInstalling
-											}
-											variant="blue"
-											width={200}
+							<>
+								<SettingsRow
+									icon={icons.download_2}
+									title={formatMessage({
+										id: "settings.modal.updates.auto.title",
+									})}
+									description={formatMessage({
+										id: "settings.modal.updates.auto.description",
+									})}
+									control={
+										<UIToggle
+											checked={autoUpdate}
+											onChange={setAutoUpdate}
 										/>
-									) : !updateDownloaded ? (
-										<ModalButton
-											icon={icons.download}
-											text={formatMessage({
-												id: "settings.downloadUpdate",
-											})}
-											onClick={downloadUpdate}
-											disabled={
-												isDownloading || isInstalling
-											}
-											variant="blue"
-											width={200}
-										/>
-									) : (
-										<ModalButton
-											icon={icons.download}
-											text={formatMessage({
-												id: "settings.modal.updates.install",
-											})}
-											onClick={installUpdate}
-											disabled={isInstalling}
-											variant="blue"
-											width={200}
-										/>
-									)
-								}
-							/>
+									}
+								/>
+								<SettingsRow
+									icon={icons.refresh}
+									title={formatMessage({
+										id: "settings.modal.updates.title",
+									})}
+									description={formatMessage(
+										{
+											id: "settings.modal.updates.description",
+										},
+										{ version: currentVersion },
+									)}
+									control={
+										!updateAvailable ? (
+											<ModalButton
+												icon={icons.refresh}
+												text={formatMessage({
+													id: "settings.checkUpdates",
+												})}
+												onClick={checkForUpdates}
+												disabled={
+													isChecking ||
+													isDownloading ||
+													isInstalling
+												}
+												variant="blue"
+												width={200}
+											/>
+										) : !updateDownloaded ? (
+											<ModalButton
+												icon={icons.download}
+												text={formatMessage({
+													id: "settings.downloadUpdate",
+												})}
+												onClick={downloadUpdate}
+												disabled={
+													isDownloading ||
+													isInstalling
+												}
+												variant="blue"
+												width={200}
+											/>
+										) : (
+											<ModalButton
+												icon={icons.download}
+												text={formatMessage({
+													id: "settings.modal.updates.install",
+												})}
+												onClick={installUpdate}
+												disabled={isInstalling}
+												variant="blue"
+												width={200}
+											/>
+										)
+									}
+								/>
+							</>
 						)}
 					</div>
 				</div>
@@ -694,14 +739,7 @@ const ModalSettings = ({
 				<div
 					className={cn("mt-[20px] mx-[15px] border-t border-line")}
 				/>
-				<div className="flex items-center justify-between px-[15px] py-[20px]">
-					<ModalButton
-						icon={icons.reverse}
-						text={formatMessage({ id: "common.reset" })}
-						onClick={handleReset}
-						variant="neutral"
-						width={200}
-					/>
+				<div className="flex items-center justify-end px-[15px] py-[20px]">
 					<ModalButton
 						icon={icons.save}
 						text={formatMessage({ id: "common.save" })}

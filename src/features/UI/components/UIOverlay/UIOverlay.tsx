@@ -1,4 +1,5 @@
-import { ReactNode } from "react";
+import { ReactNode, useRef } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "utils";
 
 /** Shared dimmed backdrop for everything that floats above the app. */
@@ -13,9 +14,29 @@ const UIOverlay = ({
 	visible?: boolean;
 	className?: string;
 }) => {
-	return (
+	/**
+	 * A click event fires on the nearest common ancestor of press and release, so
+	 * pressing inside the dialog and releasing on the backdrop would land here and
+	 * close it — e.g. when selecting text and overshooting. Only treat it as a
+	 * backdrop click when the press started on the backdrop too.
+	 */
+	const pressedOnBackdrop = useRef(false);
+
+	/**
+	 * Rendered into <body>, never in place. `position: fixed` is measured from the
+	 * nearest transformed ancestor rather than from the viewport, so an overlay left
+	 * inside e.g. an animated dashboard card would anchor itself to that card the
+	 * moment it lifts on hover — and snap back to the middle of the screen when it
+	 * settles. The portal keeps it out of reach of whatever its owner does.
+	 */
+	return createPortal(
 		<div
+			onMouseDown={event => {
+				pressedOnBackdrop.current =
+					event.target === event.currentTarget;
+			}}
 			onClick={event => {
+				if (!pressedOnBackdrop.current) return;
 				if (event.target === event.currentTarget) onClose?.();
 			}}
 			className={cn(
@@ -28,7 +49,8 @@ const UIOverlay = ({
 				className,
 			)}>
 			{children}
-		</div>
+		</div>,
+		document.body,
 	);
 };
 

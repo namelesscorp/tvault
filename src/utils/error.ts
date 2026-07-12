@@ -424,6 +424,14 @@ export function getLocalizedErrorMessage(
 		return formatMessage({ id: "common.error.containerAccessDenied" });
 	}
 
+	/**
+	 * tvault-core v1.0.1 changed the metadata block, so containers written by an
+	 * older core fail while parsing it — long before any key is involved.
+	 */
+	if (message.includes("unmarshal metadata") || message.includes("e-0052")) {
+		return formatMessage({ id: "common.error.containerLegacy" });
+	}
+
 	if (message.includes("corrupted") || message.includes("damaged")) {
 		return formatMessage({ id: "common.error.containerCorrupted" });
 	}

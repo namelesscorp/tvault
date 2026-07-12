@@ -41,7 +41,7 @@ const ModalEditVault = () => {
 	const { editData, updateEditData, applyEditToResealData } =
 		useContainerEdit(info);
 
-	const { handleCloseContainer } = useVault();
+	const { handleCloseContainer, closingProgress } = useVault();
 
 	const [tagInput, setTagInput] = useState("");
 	const [vaultPath, setVaultPath] = useState(path);
@@ -245,9 +245,14 @@ const ModalEditVault = () => {
 
 			<UIButton
 				icon={icons.save}
-				text={formatMessage({ id: "common.save" })}
+				text={
+					busy
+						? `${closingProgress}%`
+						: formatMessage({ id: "common.save" })
+				}
 				onClick={handleSave}
-				disabled={!canSave || busy}
+				disabled={!canSave}
+				loading={busy}
 				color="#ffffff"
 				noTheme
 				center

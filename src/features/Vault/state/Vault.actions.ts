@@ -145,6 +145,21 @@ export const vaultAddRecentContainer = (path: string) => {
 	};
 };
 
+/**
+ * Puts the container at the top of the dashboard AND persists the list.
+ * The bare `vaultAddRecentWithMountPath` reducer only touches redux, so on its
+ * own a freshly opened or created vault would vanish on the next launch.
+ */
+export const vaultTrackRecentContainer = (payload: {
+	path: string;
+	mountPath?: string;
+}) => {
+	return async (dispatch: AppDispatch, getState: AppGetState) => {
+		dispatch(vaultAddRecentWithMountPath(payload));
+		await saveRecentToStore(getState().vault.recent);
+	};
+};
+
 /** Drops the container from the dashboard, leaving the file on disk. */
 export const vaultRemoveRecentContainer = (path: string) => {
 	return async (dispatch: AppDispatch, getState: AppGetState) => {

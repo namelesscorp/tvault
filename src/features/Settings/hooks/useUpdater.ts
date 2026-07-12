@@ -26,7 +26,7 @@ export const useUpdater = () => {
 		isChecking: false,
 		isDownloading: false,
 		isInstalling: false,
-		currentVersion: APP_VERSION || "0.1.0-beta",
+		currentVersion: APP_VERSION || "1.0.0",
 		updateAvailable: false,
 		updateDownloaded: false,
 	});
@@ -35,7 +35,7 @@ export const useUpdater = () => {
 		try {
 			setState(prev => ({
 				...prev,
-				currentVersion: APP_VERSION || "0.1.0-beta",
+				currentVersion: APP_VERSION || "1.0.0",
 			}));
 		} catch (error) {
 			console.error("Failed to get app version:", error);

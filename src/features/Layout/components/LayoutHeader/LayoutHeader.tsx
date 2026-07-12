@@ -99,7 +99,7 @@ const LayoutHeader = () => {
 						</p>
 					</div>
 				</div>
-				<div className="flex items-center gap-[30px]">
+				<div className="flex items-center gap-[15px]">
 					<UIButton
 						icon={icons.settings}
 						text={formatMessage({ id: "common.settings" })}

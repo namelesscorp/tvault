@@ -9,7 +9,7 @@ export type DecryptMethod = "password" | "shamir";
 export type TokenType = "master" | "share" | "none";
 
 export const SHAMIR_MIN_SHARES = 2;
-export const SHAMIR_MAX_SHARES = 16;
+export const SHAMIR_MAX_SHARES = 255;
 export const SHAMIR_DEFAULT_THRESHOLD = 3;
 export const SHAMIR_DEFAULT_TOTAL = 5;
 

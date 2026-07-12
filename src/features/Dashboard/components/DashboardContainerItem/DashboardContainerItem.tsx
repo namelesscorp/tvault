@@ -1,11 +1,15 @@
 import { useMemo, useState } from "react";
 import { useIntl } from "react-intl";
-import { getContainerName, getSecurityScore } from "../../Dashboard.utils";
+import {
+	getContainerName,
+	getSecurityColors,
+	getSecurityScore,
+} from "../../Dashboard.utils";
 import { ContainerInfoData } from "interfaces";
-import { cn, formatRelativeTime } from "utils";
+import { cn, formatBytes, formatRelativeTime } from "utils";
 import { useLocale } from "features/Localization";
 import { useTheme } from "features/Theme";
-import { UIButton, UIImgIcon } from "features/UI";
+import { UIButton, UIImgIcon, UISwapValue } from "features/UI";
 import { icons } from "assets/collections/icons";
 import { DashboardContainerItemTag } from "../DashboardContainerItemTag";
 import { DashboardContainerMenu } from "../DashboardContainerMenu";
@@ -15,6 +19,9 @@ const DashboardContainerItem = ({
 	isOpened,
 	info,
 	lastOpenedAt,
+	index = 0,
+	closing = false,
+	closingProgress = 0,
 	onBrowse,
 	onLock,
 	onUnlock,
@@ -27,6 +34,10 @@ const DashboardContainerItem = ({
 	isOpened: boolean;
 	info?: ContainerInfoData;
 	lastOpenedAt?: number;
+	/** Only staggers the entrance, so the grid fills in instead of appearing at once. */
+	index?: number;
+	closing?: boolean;
+	closingProgress?: number;
 	onBrowse: () => void;
 	onLock: () => void;
 	onUnlock: () => void;
@@ -39,6 +50,11 @@ const DashboardContainerItem = ({
 	const { formatMessage } = useIntl();
 	const { locale } = useLocale();
 	const [menuOpen, setMenuOpen] = useState(false);
+
+	/** Old containers carry no sizes, and with compression=none the two match. */
+	const hasOriginalSize =
+		typeof info?.uncompressed_size === "number" &&
+		info.uncompressed_size !== info.compressed_size;
 
 	const securityTags = useMemo(() => {
 		const tags = [];
@@ -65,19 +81,14 @@ const DashboardContainerItem = ({
 			icon: icons.key,
 		});
 
-		const secutiryScore = getSecurityScore(info);
-		if (secutiryScore > 50) {
+		/** The core reports the score; older containers simply do not carry one. */
+		const securityScore = getSecurityScore(info);
+		if (securityScore !== null) {
+			const colors = getSecurityColors(securityScore);
 			tags.push({
-				text: `${secutiryScore}% Security`,
-				bgColor: resolved === "dark" ? "#274A4F" : "#DAF4E0",
-				textColor: "var(--success)",
-				icon: icons.shield_2,
-			});
-		} else {
-			tags.push({
-				text: `${secutiryScore}% Security`,
-				bgColor: resolved === "dark" ? "#4A2E3F" : "#FEDBDA",
-				textColor: "var(--danger)",
+				text: `${securityScore}% Security`,
+				bgColor: colors.tint,
+				textColor: colors.text,
 				icon: icons.shield_2,
 			});
 		}
@@ -87,8 +98,10 @@ const DashboardContainerItem = ({
 
 	return (
 		<div
+			/** Capped, or the last cards of a long list would crawl in seconds late. */
+			style={{ animationDelay: `${Math.min(index, 7) * 50}ms` }}
 			className={cn(
-				"flex flex-col p-[15px] rounded-[10px] border bg-surface border-line card-shadow",
+				"flex flex-col p-[15px] rounded-[10px] border bg-surface border-line card-shadow hover-lift animate-enter-up",
 			)}>
 			<div className="flex items-start justify-between">
 				<p
@@ -148,7 +161,7 @@ const DashboardContainerItem = ({
 					/>
 				</div>
 			</div>
-			<div className="flex items-center gap-[10px] mt-[44px]">
+			<div className="flex flex-wrap items-center gap-x-[10px] gap-y-[5px] mt-[20px]">
 				{securityTags.map(tag => (
 					<DashboardContainerItemTag key={tag.text} {...tag} />
 				))}
@@ -179,10 +192,11 @@ const DashboardContainerItem = ({
 						className={cn(
 							"text-[16px] font-bold tracking-[-0.05em] text-fg-soft",
 						)}>
-						100
+						{info?.file_count?.toLocaleString() ?? "—"}
 					</p>
 				</div>
-				<div className="flex flex-col items-center justify-center gap-[5px]">
+				{/** Hovering the cell rolls the packed size over to the original one. */}
+				<div className="group flex flex-col items-center justify-center gap-[5px] cursor-default">
 					<div className="flex items-center gap-[5px]">
 						<UIImgIcon
 							icon={icons.database}
@@ -190,22 +204,34 @@ const DashboardContainerItem = ({
 							height={20}
 							color={"var(--muted)"}
 						/>
-						<p
-							className={cn(
-								"text-[16px] font-medium tracking-[-0.05em] text-muted",
-							)}>
-							{formatMessage({ id: "dashboard.info.size" })}
-						</p>
+						<UISwapValue
+							height={24}
+							value={formatMessage({ id: "dashboard.info.size" })}
+							hoverValue={
+								hasOriginalSize
+									? formatMessage({
+											id: "dashboard.info.sizeOriginal",
+										})
+									: undefined
+							}
+							className="text-[16px] font-medium tracking-[-0.05em] text-muted"
+						/>
 					</div>
-					<p
-						className={cn(
-							"text-[16px] font-bold tracking-[-0.05em] text-fg-soft",
-						)}>
-						2.5 GB
-					</p>
+					<UISwapValue
+						height={24}
+						value={formatBytes(info?.compressed_size)}
+						hoverValue={
+							hasOriginalSize
+								? formatBytes(info?.uncompressed_size)
+								: undefined
+						}
+						className="text-[16px] font-bold tracking-[-0.05em] text-fg-soft"
+					/>
 				</div>
 			</div>
-			<div className="flex items-center gap-[10px] mt-[20px] h-[20px]">
+			{/** Kept at a minimum height even when empty so cards without tags line
+			 * up with the ones that have them. */}
+			<div className="flex flex-wrap items-center gap-x-[10px] gap-y-[5px] mt-[15px] min-h-[20px]">
 				{info?.tags?.map(tag => (
 					<DashboardContainerItemTag
 						key={tag}
@@ -215,11 +241,15 @@ const DashboardContainerItem = ({
 					/>
 				))}
 			</div>
+			{/** `mt-auto` matters once a wrapped tag row makes one card taller than its
+			 * neighbours: the slack lands above the buttons, so the footers of every
+			 * card in the row stay level. */}
 			{isOpened && (
-				<div className="grid grid-cols-2 gap-[10px] mt-[29px]">
+				<div className="grid grid-cols-2 gap-[10px] mt-auto pt-[15px]">
 					<UIButton
 						icon={icons.eye}
 						text={formatMessage({ id: "dashboard.info.browse" })}
+						disabled={closing}
 						center
 						noTheme
 						style={{
@@ -230,14 +260,19 @@ const DashboardContainerItem = ({
 					/>
 					<UIButton
 						icon={icons.lock}
-						text={formatMessage({ id: "dashboard.info.lock" })}
+						text={
+							closing
+								? `${closingProgress}%`
+								: formatMessage({ id: "dashboard.info.lock" })
+						}
+						loading={closing}
 						center
 						onClick={onLock}
 					/>
 				</div>
 			)}
 			{!isOpened && (
-				<div className="mt-[29px]">
+				<div className="mt-auto pt-[15px]">
 					<UIButton
 						icon={icons.unlock}
 						text={formatMessage({ id: "dashboard.info.unlock" })}

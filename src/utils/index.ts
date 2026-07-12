@@ -14,3 +14,5 @@ export * from "./localization";
 export * from "./error";
 export * from "./file";
 export * from "./theme";
+export * from "./motion";
+export * from "./updates";

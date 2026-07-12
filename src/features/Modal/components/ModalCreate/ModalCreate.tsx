@@ -30,15 +30,16 @@ import {
 	UIImgIcon,
 	UIInput,
 	UIPasswordField,
+	UIProgress,
 	UIToggle,
 } from "features/UI";
-import { TokenType } from "features/Vault/Vault.model";
+import { SHAMIR_MAX_SHARES, TokenType } from "features/Vault/Vault.model";
 import { useEncrypt } from "features/Vault/hooks/useEncrypt";
 import {
-	vaultAddRecentWithMountPath,
 	vaultResetWizardState,
 	vaultSetWizardEncryptCompleted,
 	vaultSetWizardState,
+	vaultTrackRecentContainer,
 } from "features/Vault/state/Vault.actions";
 import { selectVaultWizardState } from "features/Vault/state/Vault.selectors";
 import { icons } from "assets";
@@ -253,12 +254,14 @@ const Footer = ({
 	nextText,
 	nextIcon,
 	nextDisabled = false,
+	nextLoading = false,
 }: {
 	onBack?: () => void;
 	onNext: () => void;
 	nextText: string;
 	nextIcon: string;
 	nextDisabled?: boolean;
+	nextLoading?: boolean;
 }) => {
 	const { formatMessage } = useIntl();
 
@@ -277,6 +280,7 @@ const Footer = ({
 				text={nextText}
 				onClick={onNext}
 				disabled={nextDisabled}
+				loading={nextLoading}
 				color="#ffffff"
 				noTheme
 				center
@@ -340,15 +344,17 @@ const ModalCreate = () => {
 	const canLeaveBasic = name.trim().length > 0;
 	const canLeaveFolders = !!vaultFolder && !!inputPath;
 	const canLeaveSecurity = useMemo(() => {
-		if (hmacOn && !hmacPassword.trim()) return false;
+		if (hmacOn && !isPassword && !hmacPassword.trim()) return false;
 		if (isPassword) return password.trim().length >= 8;
 		if (isShare) {
 			const n = Number(total);
 			const k = Number(threshold);
+			/** The core stores shares/threshold in one byte each: 2 – 255. */
 			return (
 				Number.isInteger(n) &&
 				Number.isInteger(k) &&
 				n >= 2 &&
+				n <= SHAMIR_MAX_SHARES &&
 				k >= 2 &&
 				k <= n
 			);
@@ -419,8 +425,8 @@ const ModalCreate = () => {
 				passphrase: isPassword ? password : undefined,
 				shareDest: "stdout",
 				sharePath: "",
-				integrityProvider: hmacOn ? "hmac" : "none",
-				additionalPassword: hmacOn ? hmacPassword : "",
+				integrityProvider: hmacOn && !isPassword ? "hmac" : "none",
+				additionalPassword: hmacOn && !isPassword ? hmacPassword : "",
 			}),
 		);
 
@@ -503,9 +509,7 @@ const ModalCreate = () => {
 				});
 				await store.set(KEY, filtered.slice(0, 100));
 				await store.save();
-				dispatch(
-					vaultAddRecentWithMountPath({ path: state.outputPath }),
-				);
+				dispatch(vaultTrackRecentContainer({ path: state.outputPath }));
 			} catch (e) {
 				devError(e);
 			}
@@ -938,21 +942,28 @@ const ModalCreate = () => {
 					</div>
 				)}
 
-				<Card className="mt-[20px]">
-					<CardHeading
-						icon={icons.fingerprint}
-						title={formatMessage({ id: "modal.create.hmac.title" })}
-						subtitle={formatMessage({
-							id: "modal.create.hmac.description",
-						})}
-						iconColor={"var(--success-alt)"}
-						right={
-							<UIToggle checked={hmacOn} onChange={setHmacOn} />
-						}
-					/>
-				</Card>
+				{!isPassword && (
+					<Card className="mt-[20px]">
+						<CardHeading
+							icon={icons.fingerprint}
+							title={formatMessage({
+								id: "modal.create.hmac.title",
+							})}
+							subtitle={formatMessage({
+								id: "modal.create.hmac.description",
+							})}
+							iconColor={"var(--success-alt)"}
+							right={
+								<UIToggle
+									checked={hmacOn}
+									onChange={setHmacOn}
+								/>
+							}
+						/>
+					</Card>
+				)}
 
-				{hmacOn && (
+				{hmacOn && !isPassword && (
 					<div className="flex flex-col gap-[10px] mt-[20px]">
 						<Label
 							text={formatMessage({
@@ -1085,7 +1096,7 @@ const ModalCreate = () => {
 							</p>
 							<p
 								className={cn(
-									"text-[14px] font-medium tracking-[-0.05em] text-right break-all text-fg",
+									"text-[14px] font-medium tracking-[-0.05em] text-right min-w-0 [overflow-wrap:anywhere] text-fg",
 								)}>
 								{value || "—"}
 							</p>
@@ -1094,18 +1105,7 @@ const ModalCreate = () => {
 				</Card>
 
 				{running && (
-					<div className="mt-[20px]">
-						<div className="h-[10px] rounded-[10px] bg-white/10 overflow-hidden">
-							<div
-								className="h-full bg-[#2463EB] transition-all duration-300"
-								style={{ width: `${progress}%` }}
-							/>
-						</div>
-						<p className="mt-[10px] text-center text-[14px] font-medium tracking-[-0.05em] text-white/70">
-							{formatMessage({ id: "common.progress" })}:{" "}
-							{progress}%
-						</p>
-					</div>
+					<UIProgress value={progress} className="mt-[20px]" />
 				)}
 
 				<Footer
@@ -1117,9 +1117,13 @@ const ModalCreate = () => {
 						)
 					}
 					onNext={handleCreate}
-					nextText={formatMessage({ id: "common.create" })}
+					nextText={
+						running
+							? `${progress}%`
+							: formatMessage({ id: "common.create" })
+					}
 					nextIcon={icons.arrow_right}
-					nextDisabled={running}
+					nextLoading={running}
 				/>
 			</div>
 		);
