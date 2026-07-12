@@ -33,6 +33,14 @@ interface NotificationsState {
 	updates: boolean;
 }
 
+/**
+ * The notifications tab is hidden until it does something: its toggles are held in
+ * local state that nothing reads, and the app has no notification plugin to deliver
+ * anything with. The tab and its rows are kept — flip this back to show them once
+ * they are wired up.
+ */
+const NOTIFICATIONS_ENABLED = false;
+
 /** Softens the bottom edge of a scrollable list — see the containers folders. */
 const FADE = "linear-gradient(to bottom, #000 82%, transparent 100%)";
 
@@ -298,10 +306,14 @@ const ModalSettings = ({
 	const tabs = [
 		{ key: SettingsTab.General, label: "settings.modal.tabs.general" },
 		{ key: SettingsTab.Interface, label: "settings.modal.tabs.interface" },
-		{
-			key: SettingsTab.Notifications,
-			label: "settings.modal.tabs.notifications",
-		},
+		...(NOTIFICATIONS_ENABLED
+			? [
+					{
+						key: SettingsTab.Notifications,
+						label: "settings.modal.tabs.notifications",
+					},
+				]
+			: []),
 		{ key: SettingsTab.Backup, label: "settings.modal.tabs.backup" },
 		{ key: SettingsTab.Updates, label: "settings.modal.tabs.updates" },
 	];
@@ -526,70 +538,71 @@ const ModalSettings = ({
 							</>
 						)}
 
-						{activeTab === SettingsTab.Notifications && (
-							<>
-								<SettingsRow
-									icon={icons.unlock}
-									title={formatMessage({
-										id: "settings.modal.notifications.unlock.title",
-									})}
-									description={formatMessage({
-										id: "settings.modal.notifications.unlock.description",
-									})}
-									control={
-										<UIToggle
-											checked={notifications.unlock}
-											onChange={next =>
-												setNotifications(prev => ({
-													...prev,
-													unlock: next,
-												}))
-											}
-										/>
-									}
-								/>
-								<SettingsRow
-									icon={icons.shield}
-									title={formatMessage({
-										id: "settings.modal.notifications.security.title",
-									})}
-									description={formatMessage({
-										id: "settings.modal.notifications.security.description",
-									})}
-									control={
-										<UIToggle
-											checked={notifications.security}
-											onChange={next =>
-												setNotifications(prev => ({
-													...prev,
-													security: next,
-												}))
-											}
-										/>
-									}
-								/>
-								<SettingsRow
-									icon={icons.refresh}
-									title={formatMessage({
-										id: "settings.modal.notifications.updates.title",
-									})}
-									description={formatMessage({
-										id: "settings.modal.notifications.updates.description",
-									})}
-									control={
-										<UIToggle
-											checked={notifications.updates}
-											onChange={next =>
-												setNotifications(prev => ({
-													...prev,
-													updates: next,
-												}))
-											}
-										/>
-									}
-								/>
-							</>
-						)}
+						{NOTIFICATIONS_ENABLED &&
+							activeTab === SettingsTab.Notifications && (
+								<>
+									<SettingsRow
+										icon={icons.unlock}
+										title={formatMessage({
+											id: "settings.modal.notifications.unlock.title",
+										})}
+										description={formatMessage({
+											id: "settings.modal.notifications.unlock.description",
+										})}
+										control={
+											<UIToggle
+												checked={notifications.unlock}
+												onChange={next =>
+													setNotifications(prev => ({
+														...prev,
+														unlock: next,
+													}))
+												}
+											/>
+										}
+									/>
+									<SettingsRow
+										icon={icons.shield}
+										title={formatMessage({
+											id: "settings.modal.notifications.security.title",
+										})}
+										description={formatMessage({
+											id: "settings.modal.notifications.security.description",
+										})}
+										control={
+											<UIToggle
+												checked={notifications.security}
+												onChange={next =>
+													setNotifications(prev => ({
+														...prev,
+														security: next,
+													}))
+												}
+											/>
+										}
+									/>
+									<SettingsRow
+										icon={icons.refresh}
+										title={formatMessage({
+											id: "settings.modal.notifications.updates.title",
+										})}
+										description={formatMessage({
+											id: "settings.modal.notifications.updates.description",
+										})}
+										control={
+											<UIToggle
+												checked={notifications.updates}
+												onChange={next =>
+													setNotifications(prev => ({
+														...prev,
+														updates: next,
+													}))
+												}
+											/>
+										}
+									/>
+								</>
+							)}
 
 						{activeTab === SettingsTab.Backup && (
 							<>

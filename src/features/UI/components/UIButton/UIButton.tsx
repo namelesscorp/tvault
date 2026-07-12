@@ -51,6 +51,7 @@ const UIButton = ({
 			{...props}
 			style={{
 				...props.style,
+				backgroundOrigin: "border-box",
 			}}>
 			{loading ? (
 				<span
