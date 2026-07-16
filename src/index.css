@@ -290,10 +290,16 @@ html.native-frame body {
  * The spinner is the deliberate exception: it reports that work is running, and
  * a frozen spinner reads as a hung app rather than as a calm one. Transform-based
  * hovers are pinned separately, otherwise "no motion" would just make them snap.
+ *
+ * The toast progress bar is the second exception: react-toastify closes a toast
+ * when that bar's animation ends, and its autoClose delay lives in the bar's
+ * inline animation-duration. Clamping it to 1ms here fires animationend at once,
+ * so notifications flash and vanish before they can be read. Leave its duration
+ * alone so toasts stay for their full autoClose time.
  */
-html.no-motion *:not(.animate-spin),
-html.no-motion *:not(.animate-spin)::before,
-html.no-motion *:not(.animate-spin)::after {
+html.no-motion *:not(.animate-spin):not(.Toastify__progress-bar--animated),
+html.no-motion *:not(.animate-spin):not(.Toastify__progress-bar--animated)::before,
+html.no-motion *:not(.animate-spin):not(.Toastify__progress-bar--animated)::after {
 	transition-duration: 1ms !important;
 	transition-delay: 0ms !important;
 	animation-duration: 1ms !important;

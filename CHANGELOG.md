@@ -4,6 +4,12 @@ All notable changes to TVault are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] — 2026-07-17
+
+### Fixed
+
+- Notifications no longer flash and vanish the instant they appear when interface animations are turned off (Settings › Interface). A toast is dismissed when its progress bar finishes animating, and "no motion" was collapsing that animation to an instant — closing every notification before it could be read. Toasts now stay for their full duration regardless of the animation setting.
+
 ## [1.0.0] — 2026-07-12
 
 The first stable release. The interface was rebuilt around a vault dashboard, and the app now ships with tvault-core 1.1.0.
@@ -81,6 +87,7 @@ The first public beta.
 - Mouse-entropy key generation.
 - Windows and macOS builds.
 
+[1.0.1]: https://github.com/namelesscorp/tvault/releases/tag/v1.0.1
 [1.0.0]: https://github.com/namelesscorp/tvault/releases/tag/v1.0.0
 [0.1.3-beta]: https://github.com/namelesscorp/tvault/releases/tag/v0.1.3-beta
 [0.1.2-beta]: https://github.com/namelesscorp/tvault/releases/tag/v0.1.2-beta
