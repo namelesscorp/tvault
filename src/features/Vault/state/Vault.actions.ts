@@ -178,6 +178,10 @@ export const vaultDeleteContainer = (path: string) => {
 		const { invoke } = await import("@tauri-apps/api/core");
 		await invoke("remove_file", { path });
 
+		/** The vault is gone — drop its saved Keychain key too (best-effort). */
+		const { keychainDelete } = await import("features/Keychain");
+		await keychainDelete(path);
+
 		dispatch(vaultRemoveRecent(path));
 		dispatch(vaultRemoveResealData(path));
 		dispatch(vaultRemoveContainer(path));

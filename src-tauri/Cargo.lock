@@ -2374,6 +2374,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "objc2-local-authentication"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ece6cee251f29a936d3d143f6847ba6b121e5f906f9c838f68524c78abe6aa30"
+dependencies = [
+ "block2 0.6.1",
+ "objc2 0.6.1",
+ "objc2-foundation 0.3.1",
+ "objc2-security",
+]
+
+[[package]]
 name = "objc2-metal"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4566,8 +4578,14 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tvault-client"
-version = "1.0.1"
+version = "1.1.0"
 dependencies = [
+ "block2 0.6.1",
+ "core-foundation",
+ "core-foundation-sys",
+ "objc2 0.6.1",
+ "objc2-foundation 0.3.1",
+ "objc2-local-authentication",
  "once_cell",
  "serde",
  "serde_json",

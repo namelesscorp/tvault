@@ -6,6 +6,7 @@ import { useIntl } from "react-intl";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { devError, devLog, openPathUniversal } from "utils";
+import { keychainHas, keychainMove } from "features/Keychain";
 import { ModalTypes } from "features/Modal/Modal.model";
 import {
 	modalSetIcon,
@@ -196,6 +197,18 @@ export const useVault = (
 						devLog("[tvault] Final reseal args:", resealArgs);
 						await runReseal(resealArgs);
 
+						/** Keep the Keychain secret pointing at the moved file. */
+						if (
+							completeResealData.newContainerPath &&
+							completeResealData.newContainerPath !==
+								completeResealData.containerPath
+						) {
+							await keychainMove(
+								completeResealData.containerPath,
+								completeResealData.newContainerPath,
+							);
+						}
+
 						devLog("[tvault] Reseal completed successfully");
 						toast.success(
 							formatMessage({ id: "container.reseal.success" }),
@@ -284,6 +297,9 @@ export const useVault = (
 			const recentItem = recent.find(r => r.path === containerPath);
 			const savedMountPath = recentItem?.lastMountPath;
 
+			/** Probe the Keychain (no biometric prompt) to offer a Touch ID unlock. */
+			const keychainAvailable = await keychainHas(containerPath);
+
 			dispatch(
 				vaultSetOpenWizardState({
 					containerPath: containerPath,
@@ -293,6 +309,7 @@ export const useVault = (
 					tokenType: info?.token_type as any,
 					method: method as any,
 					integrityProvider: integrity,
+					keychainAvailable,
 					quickOpen: true,
 				} as any),
 			);

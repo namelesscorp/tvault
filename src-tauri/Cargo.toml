@@ -1,6 +1,6 @@
 [package]
 name = "tvault-client"
-version = "1.0.1"
+version = "1.1.0"
 description = "A Tauri App"
 authors = ["nameless"]
 edition = "2021"
@@ -30,3 +30,14 @@ tauri-plugin-store           = "2"
 tauri-plugin-updater         = "2"
 tauri-plugin-process         = "2"
 tokio = { version = "1.38", features = ["rt-multi-thread", "macros"] }
+
+# macOS Keychain (plain storage) + LocalAuthentication (Touch ID / password gate).
+# CoreFoundation gives the safe CF wrappers for the Security.framework symbols
+# declared in keychain.rs; objc2-local-authentication drives the LAContext sheet.
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10"
+core-foundation-sys = "0.8"
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-local-authentication = "0.3"
+block2 = "0.6"

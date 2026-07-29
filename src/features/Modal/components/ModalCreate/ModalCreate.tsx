@@ -22,6 +22,11 @@ import {
 	toFileName,
 } from "utils";
 import { EntropyCanvas } from "features/EntropyCanvas";
+import {
+	keychainAvailable,
+	keychainSet,
+	secretForTokenType,
+} from "features/Keychain";
 import { useLocale } from "features/Localization";
 import {
 	modalSetBusy,
@@ -59,6 +64,7 @@ enum CreateStep {
 	Folders = "folders",
 	Security = "security",
 	Entropy = "entropy",
+	Keychain = "keychain",
 	Summary = "summary",
 	Created = "created",
 	Info = "info",
@@ -342,6 +348,16 @@ const ModalCreate = () => {
 		wizard.additionalPassword ?? "",
 	);
 
+	/* keychain (macOS only) */
+	const [keychainSupported, setKeychainSupported] = useState(false);
+	const [saveToKeychain, setSaveToKeychain] = useState(
+		wizard.saveToKeychain ?? false,
+	);
+
+	useEffect(() => {
+		keychainAvailable().then(setKeychainSupported);
+	}, []);
+
 	const isPassword = tokenType === "none";
 	const isShare = tokenType === "share";
 
@@ -436,13 +452,17 @@ const ModalCreate = () => {
 			}),
 		);
 
-		setStep(generated ? CreateStep.Entropy : CreateStep.Summary);
+		const afterKey = keychainSupported
+			? CreateStep.Keychain
+			: CreateStep.Summary;
+		setStep(generated ? CreateStep.Entropy : afterKey);
 	}, [
 		dispatch,
 		hmacOn,
 		hmacPassword,
 		isPassword,
 		isShare,
+		keychainSupported,
 		password,
 		threshold,
 		tokenType,
@@ -454,8 +474,13 @@ const ModalCreate = () => {
 		dispatch(
 			vaultSetWizardState({ ...wizard, passphrase: randomSecret() }),
 		);
+		setStep(keychainSupported ? CreateStep.Keychain : CreateStep.Summary);
+	}, [dispatch, keychainSupported, wizard]);
+
+	const commitKeychain = useCallback(() => {
+		dispatch(vaultSetWizardState({ ...wizard, saveToKeychain }));
 		setStep(CreateStep.Summary);
-	}, [dispatch, wizard]);
+	}, [dispatch, saveToKeychain, wizard]);
 
 	const handleCreate = useCallback(async () => {
 		setRunning(true);
@@ -521,8 +546,43 @@ const ModalCreate = () => {
 			}
 		})();
 
+		/**
+		 * Save the vault key to the Keychain if the user opted in. The secret is
+		 * only available now, on the "created" transition. HMAC is never stored.
+		 */
+		if (state.saveToKeychain) {
+			const secret = secretForTokenType(state.tokenType, {
+				password: state.passphrase,
+				masterToken: res?.masterToken,
+				shares: res?.shares,
+			});
+			const hmac =
+				state.integrityProvider === "hmac"
+					? state.additionalPassword || undefined
+					: undefined;
+			if (secret) {
+				(async () => {
+					try {
+						await keychainSet(state.outputPath, secret, hmac);
+						toast.success(
+							formatMessage({
+								id: "modal.create.keychain.saved",
+							}),
+						);
+					} catch (e) {
+						devError(e);
+						toast.error(
+							formatMessage({
+								id: "modal.create.keychain.error",
+							}),
+						);
+					}
+				})();
+			}
+		}
+
 		setStep(CreateStep.Created);
-	}, [done, error, dispatch]);
+	}, [done, error, dispatch, formatMessage]);
 
 	useEffect(() => {
 		dispatch(modalSetBusy(running));
@@ -1037,6 +1097,51 @@ const ModalCreate = () => {
 		);
 	}
 
+	if (step === CreateStep.Keychain) {
+		return (
+			<div>
+				<p
+					className={cn(
+						"text-[20px] font-semibold tracking-[-0.05em] text-fg",
+					)}>
+					{formatMessage({ id: "modal.create.keychain.title" })}
+				</p>
+				<Muted>{formatMessage({ id: "modal.create.keychain.subtitle" })}</Muted>
+				<Card className="mt-[20px]">
+					<CardHeading
+						icon={icons.fingerprint}
+						title={formatMessage({
+							id: "modal.create.keychain.card.title",
+						})}
+						subtitle={formatMessage({
+							id: `modal.create.keychain.card.${wizard.tokenType}`,
+						})}
+						iconColor={"var(--success-alt)"}
+						right={
+							<UIToggle
+								checked={saveToKeychain}
+								onChange={setSaveToKeychain}
+							/>
+						}
+					/>
+					<Hint>{formatMessage({ id: "modal.create.keychain.hint" })}</Hint>
+				</Card>
+				<Footer
+					onBack={() =>
+						setStep(
+							wizard.keySource === "generated"
+								? CreateStep.Entropy
+								: CreateStep.Security,
+						)
+					}
+					onNext={commitKeychain}
+					nextText={formatMessage({ id: "common.next" })}
+					nextIcon={icons.arrow_right}
+				/>
+			</div>
+		);
+	}
+
 	if (step === CreateStep.Summary) {
 		const rows: [string, string][] = [
 			[formatMessage({ id: "container.name" }), wizard.name],
@@ -1117,9 +1222,11 @@ const ModalCreate = () => {
 				<Footer
 					onBack={() =>
 						setStep(
-							wizard.keySource === "generated"
-								? CreateStep.Entropy
-								: CreateStep.Security,
+							keychainSupported
+								? CreateStep.Keychain
+								: wizard.keySource === "generated"
+									? CreateStep.Entropy
+									: CreateStep.Security,
 						)
 					}
 					onNext={handleCreate}

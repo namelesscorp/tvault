@@ -12,6 +12,7 @@ import {
 	openPathUniversal,
 	stripTokenLabel,
 } from "utils";
+import { KeychainSecret, keychainGet } from "features/Keychain";
 import { useLocale } from "features/Localization";
 import { modalSetBusy, modalSetOpen } from "features/Modal/state/Modal.actions";
 import { useAppDispatch } from "features/Store";
@@ -309,6 +310,87 @@ const ModalOpen = () => {
 		tokenJsonPath,
 	]);
 
+	/**
+	 * Touch ID / password unlock: pull the vault key out of the Keychain instead
+	 * of the input fields, then run the exact same decrypt paths. The HMAC
+	 * integrity password is never stored, so it is still read from its field.
+	 */
+	const handleTouchId = useCallback(async () => {
+		const containerPath = openWizardState.containerPath;
+		if (!containerPath) {
+			toast.error(formatMessage({ id: "modal.open.error.noPath" }));
+			return;
+		}
+
+		let bundle: KeychainSecret;
+		try {
+			bundle = await keychainGet(
+				containerPath,
+				formatMessage({ id: "modal.open.keychain.prompt" }),
+			);
+		} catch (e) {
+			const msg = typeof e === "string" ? e : String((e as any)?.message ?? e);
+			// User dismissed the sheet / biometry failed — fall back to manual entry.
+			if (msg.includes("cancelled")) return;
+			devError(e);
+			toast.error(formatMessage({ id: "modal.open.keychain.error" }));
+			return;
+		}
+
+		const secret = bundle.secret;
+
+		notifiedRef.current = false;
+
+		const folderPath = await resolveFolderPath();
+		setUsedFolderPath(folderPath);
+
+		/** Prefer the stored HMAC; fall back to whatever the user typed. */
+		const additionalPassword =
+			openWizardState.integrityProvider === "hmac"
+				? bundle.hmac || hmac || undefined
+				: undefined;
+
+		credentialsRef.current = {
+			password: isPassword ? secret : "",
+			masterToken: isMaster ? secret : "",
+			shares: isShare ? secret.split("|") : [],
+			tokenJsonPath: "",
+			hmac: additionalPassword ?? "",
+		};
+
+		try {
+			if (isPassword) {
+				await run({
+					containerPath,
+					folderPath,
+					passphrase: secret,
+					additionalPassword,
+				});
+				return;
+			}
+
+			await run({
+				containerPath,
+				folderPath,
+				tokenReaderType: "flag",
+				tokenFormat: "plaintext",
+				tokenFlag: secret,
+				additionalPassword,
+			});
+		} catch (err) {
+			devError(err);
+		}
+	}, [
+		formatMessage,
+		hmac,
+		isMaster,
+		isPassword,
+		isShare,
+		openWizardState,
+		resolveFolderPath,
+		run,
+	]);
+
 	useEffect(() => {
 		dispatch(modalSetBusy(busy));
 	}, [busy, dispatch]);
@@ -428,6 +510,33 @@ const ModalOpen = () => {
 					})}
 				</p>
 			</div>
+			{openWizardState.keychainAvailable && (
+				<div className="mt-[20px] flex flex-col gap-[15px]">
+					<UIButton
+						icon={icons.fingerprint}
+						text={formatMessage({
+							id: "modal.open.keychain.button",
+						})}
+						onClick={handleTouchId}
+						disabled={busy}
+						color="#ffffff"
+						noTheme
+						center
+						style={{
+							/* Same solid green as the other green buttons —
+							   --success is too bright for white text in dark theme. */
+							backgroundColor: "#16853F",
+							color: "#ffffff",
+						}}
+					/>
+					<p
+						className={cn(
+							"text-[14px] font-medium tracking-[-0.05em] text-center text-muted",
+						)}>
+						{formatMessage({ id: "modal.open.keychain.or" })}
+					</p>
+				</div>
+			)}
 			<div className="mt-[28px]">
 				<div className="flex items-center justify-between min-h-[40px]">
 					<p

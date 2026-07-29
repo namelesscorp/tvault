@@ -6,8 +6,12 @@ use tauri_plugin_fs;
 use tauri_plugin_store;
 use tauri_plugin_updater;
 mod cli_runner;
+mod keychain;
 
-use cli_runner::{run_encrypt, run_decrypt, run_container_info, run_reseal, container_info_once}; 
+use cli_runner::{run_encrypt, run_decrypt, run_container_info, run_reseal, container_info_once};
+use keychain::{
+    keychain_available, keychain_delete, keychain_get, keychain_has, keychain_move, keychain_set,
+};
 
 /* ---------- scan directory for containers ---------- */
 #[tauri::command]
@@ -256,7 +260,13 @@ pub fn run() {
             run_container_info,
             container_info_once,
             run_reseal,
-            open_path_native
+            open_path_native,
+            keychain_available,
+            keychain_set,
+            keychain_get,
+            keychain_has,
+            keychain_delete,
+            keychain_move
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

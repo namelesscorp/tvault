@@ -52,6 +52,9 @@ export interface VaultWizardState {
 	integrityProvider: IntegrityProvider;
 	additionalPassword?: string;
 
+	/* keychain: save the vault key to the macOS Keychain (Touch ID) after create */
+	saveToKeychain?: boolean;
+
 	/* last step tracking */
 
 	/* execution results */
@@ -86,6 +89,9 @@ export interface VaultOpenWizardState {
 
 	/* integrity */
 	additionalPassword?: string;
+
+	/* keychain: a Touch ID secret exists for this container (probed on open) */
+	keychainAvailable?: boolean;
 
 	/* quick open flow: skip selection/summary and jump between only required steps */
 	quickOpen?: boolean;
