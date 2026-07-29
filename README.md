@@ -20,6 +20,8 @@ Every vault you own sits on one screen. Each card tells you how many files the v
 
 - **Security Score:** Every vault carries a score, computed by the core from the way the vault was built – key type, integrity verification, compression. It is shown on the card and colour-coded (red, amber, green), so a vault behind a lone password stands out from one split into Shamir shares with HMAC integrity.
 
+- **Unlock with Touch ID (macOS):** Save a vault’s key to the macOS Keychain when you create it, and reopen the vault with Touch ID or your Mac login password instead of typing its password, master token or Shamir shares. If the vault uses HMAC integrity verification, its integrity password is saved alongside the key, so a single prompt opens the vault completely. It is entirely opt-in, and the option is hidden on other platforms.
+
 - **Cross-Platform Desktop App:** TVault runs natively on Windows and macOS, with a consistent user interface across both. The app is built with a lightweight stack (powered by Tauri) that integrates with your operating system’s native webview. This results in a small bundle size and minimal resource usage, while still providing a modern, responsive UI. It follows your system’s light or dark theme, speaks English and Russian, and its animations can be switched off entirely.
 
 - **Open Source & Privacy-Focused:** The source code is available for review, and the application is local-first. All vault data is stored locally on your machine – TVault does not upload or sync your files to any cloud service. Your secrets stay with you. (See [License](https://github.com/namelesscorp/TVault/blob/master/LICENSE) for details on the source-available license.) The project welcomes community contributions and operates with transparency in mind.
@@ -55,7 +57,11 @@ TVault follows a simple flow: **Create** → **Unlock** → **Work with files** 
 
     ![Security settings](docs/screenshots/create-security.png)
 
-4. **Finish.** The container is created at the chosen location, with real progress reported while your files are packed and encrypted. If the vault uses a master token or Shamir shares, **this is the only time they are shown** — copy or save them now, they cannot be recovered later.
+4. **Save to Keychain (macOS).** Optionally save the vault’s key to the macOS Keychain so you can reopen the vault with Touch ID or your Mac login password instead of typing credentials. It covers every unlock method — password, master token and Shamir shares — and, for a vault with HMAC integrity verification, its integrity password is saved alongside the key, so a single Touch ID prompt opens the vault completely. This step is opt-in and macOS-only; skip it to keep entering credentials by hand.
+
+    ![Save to Keychain](docs/screenshots/create-keychain.png)
+
+5. **Finish.** The container is created at the chosen location, with real progress reported while your files are packed and encrypted. If the vault uses a master token or Shamir shares, **this is the only time they are shown** — copy or save them now, they cannot be recovered later.
 
 ### Open a vault that is not on the dashboard
 
@@ -68,6 +74,10 @@ A container that TVault has never seen — one you copied from another machine, 
 Press **Unlock vault** on the card. TVault asks only for what that vault actually needs: a password, a master token, or the required number of Shamir shares — plus the HMAC password, if integrity verification is enabled.
 
 ![Unlock a vault](docs/screenshots/unlock-vault.png)
+
+If you saved the vault’s key to the Keychain when you created it, an **Unlock with Touch ID** button appears above the fields: authenticate with Touch ID or your Mac login password and the vault opens without typing anything. Cancel it to fall back to entering the key by hand. (macOS only.)
+
+![Unlock with Touch ID](docs/screenshots/unlock-touchid.png)
 
 On success, TVault decrypts the container into a temporary OS folder (inside your system’s temp directory). This is the folder you’ll work in.
 
